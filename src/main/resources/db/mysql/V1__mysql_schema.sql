@@ -1,6 +1,8 @@
 -- MySQL 8.4+ baseline for a new database. The PostgreSQL migration history is archived separately.
 -- Database is selected by the JDBC URL; no hardcoded USE that could redirect migrations.
 -- Explicit utf8mb4 supports emoji and all nine languages even if the database was created as utf8.
+USE done_db;
+
 CREATE TABLE app_users (
     id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
     email VARCHAR(254),
