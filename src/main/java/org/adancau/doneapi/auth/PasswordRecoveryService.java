@@ -51,10 +51,10 @@ public class PasswordRecoveryService {
     String hash=Crypto.hash(token);
     tx.executeWithoutResult(status -> {
       // Take the queue lock before user/queue row locks to preserve a consistent lock order.
-      jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtext(?))","done-recovery-queue");
-      var owners=jdbc.queryForList("SELECT user_id FROM password_reset_tokens WHERE token_hash=? AND expires_at>?",UUID.class,hash,now());
+      jdbc.queryForList("SELECT lock_name FROM application_locks WHERE lock_name=? FOR UPDATE","done-recovery-queue");
+      var owners=jdbc.queryForList("SELECT user_id FROM password_reset_tokens WHERE token_hash=? AND expires_at>?",String.class,hash,now());
       if (owners.isEmpty()) throw invalidToken();
-      UUID owner=owners.getFirst();
+      UUID owner=UUID.fromString(owners.getFirst());
       var user=users.lockById(owner).orElseThrow(PasswordRecoveryService::invalidToken);
       // Check again under the same user lock used by login, refresh and password changes.
       if (user.getPasswordHash()==null || jdbc.update("DELETE FROM password_reset_tokens WHERE token_hash=? AND user_id=? AND expires_at>?",hash,owner,now())!=1)
@@ -74,12 +74,12 @@ public class PasswordRecoveryService {
 
   private void enqueue(String email,String kind) {
     // Serialize capacity checks across instances; bounded queue, no account lookup on the HTTP path.
-    jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtext(?))","done-recovery-queue");
+    jdbc.queryForList("SELECT lock_name FROM application_locks WHERE lock_name=? FOR UPDATE","done-recovery-queue");
     jdbc.update("DELETE FROM recovery_mail_queue WHERE expires_at<=?",now());
     if (jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue",Long.class)>=props.queueCapacity())
       throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE,"recovery_busy","Recovery temporarily unavailable. Please retry.");
     var instant=clock.instant();
-    jdbc.update("INSERT INTO recovery_mail_queue(id,email,kind,created_at,expires_at,next_attempt_at) VALUES (?,?,?,?,?,?) ON CONFLICT(email,kind) DO NOTHING",
+    jdbc.update("INSERT INTO recovery_mail_queue(id,email,kind,created_at,expires_at,next_attempt_at) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE id=id",
         UUID.randomUUID(),email,kind,DatabaseTime.at(instant),DatabaseTime.at(instant.plusSeconds(3600)),DatabaseTime.at(instant));
   }
 
@@ -88,11 +88,13 @@ public class PasswordRecoveryService {
     if (!props.enabled()) return false;
     Job job=tx.execute(status -> {
       UUID lease=UUID.randomUUID();
-      var jobs=jdbc.query("WITH candidate AS (SELECT id FROM recovery_mail_queue WHERE next_attempt_at<=? AND expires_at>? AND attempts<3 ORDER BY next_attempt_at FOR UPDATE SKIP LOCKED LIMIT 1) "
-          +"UPDATE recovery_mail_queue q SET lease_id=?,attempts=attempts+1,next_attempt_at=? FROM candidate c WHERE q.id=c.id RETURNING q.id,q.email,q.kind,q.attempts",
-          (rs,n) -> new Job(rs.getObject("id",UUID.class),rs.getString("email"),rs.getString("kind"),lease,rs.getInt("attempts")),
-          now(),now(),lease,DatabaseTime.at(clock.instant().plusSeconds(120)));
-      return jobs.isEmpty() ? null : jobs.getFirst();
+      var jobs=jdbc.query("SELECT id,email,kind,attempts FROM recovery_mail_queue WHERE next_attempt_at<=? AND expires_at>? AND attempts<3 ORDER BY next_attempt_at,id LIMIT 1 FOR UPDATE SKIP LOCKED",
+          (rs,n) -> new Job(UUID.fromString(rs.getString("id")),rs.getString("email"),rs.getString("kind"),lease,rs.getInt("attempts")+1),now(),now());
+      if(jobs.isEmpty())return null;
+      var claimed=jobs.getFirst();
+      jdbc.update("UPDATE recovery_mail_queue SET lease_id=?,attempts=attempts+1,next_attempt_at=? WHERE id=?",
+          lease,DatabaseTime.at(clock.instant().plusSeconds(120)),claimed.id());
+      return claimed;
     });
     if (job==null) return false;
     try {
@@ -101,7 +103,7 @@ public class PasswordRecoveryService {
         if (candidate==null) return null;
         var user=users.lockById(candidate.getId()).orElse(null);
         if (user==null || user.getPasswordHash()==null) return null; // Apple-only accounts keep Apple's recovery flow.
-        var active=jdbc.queryForList("SELECT id FROM recovery_mail_queue WHERE id=? AND lease_id=? AND expires_at>? FOR UPDATE",UUID.class,job.id(),job.lease(),now());
+        var active=jdbc.queryForList("SELECT id FROM recovery_mail_queue WHERE id=? AND lease_id=? AND expires_at>? FOR UPDATE",String.class,job.id(),job.lease(),now());
         if (active.isEmpty()) return null; // Cancelled by a password change/deletion, or reclaimed after a crash.
         String token=null;
         if(job.kind().equals("reset")) {

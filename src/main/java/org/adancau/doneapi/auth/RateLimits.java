@@ -25,20 +25,11 @@ public class RateLimits {
   public boolean consume(String bucket, int limit, int seconds) {
     var now = org.adancau.doneapi.common.DatabaseTime.at(clock.instant());
     var expiry = org.adancau.doneapi.common.DatabaseTime.at(clock.instant().plusSeconds(seconds));
-    return Boolean.TRUE.equals(
-        jdbc.queryForObject(
-            "INSERT INTO auth_rate_buckets(bucket_key,requests,expires_at) VALUES (?,1,?) ON"
-                + " CONFLICT(bucket_key) DO UPDATE SET requests=CASE WHEN"
-                + " auth_rate_buckets.expires_at<=? THEN 1 ELSE"
-                + " LEAST(auth_rate_buckets.requests+1,?) END, expires_at=CASE WHEN"
-                + " auth_rate_buckets.expires_at<=? THEN EXCLUDED.expires_at ELSE"
-                + " auth_rate_buckets.expires_at END RETURNING requests<=?",
-            Boolean.class,
-            Crypto.hash(bucket),
-            expiry,
-            now,
-            limit + 1,
-            now,
-            limit));
+    String key=Crypto.hash(bucket);
+    // Upsert holds the row lock until the read and this REQUIRES_NEW transaction commit.
+    jdbc.update("INSERT INTO auth_rate_buckets(bucket_key,requests,expires_at) VALUES (?,1,?) "
+        +"ON DUPLICATE KEY UPDATE requests=IF(expires_at<=?,1,LEAST(requests+1,?)), expires_at=IF(expires_at<=?,?,expires_at)",
+        key,expiry,now,limit+1,now,expiry);
+    return Boolean.TRUE.equals(jdbc.queryForObject("SELECT requests<=? FROM auth_rate_buckets WHERE bucket_key=?",Boolean.class,limit,key));
   }
 }

@@ -1,25 +1,21 @@
 #!/bin/sh
-# Idempotent on both fresh and existing production databases. No secret arguments/logging.
+# Run inside the MySQL container as root after it is healthy, before API startup.
+# Passwords travel over stdin/environment, never SQL process arguments or logs.
 set -eu
-: "${POSTGRES_USER:?}"
-: "${POSTGRES_DB:?}"
+: "${MYSQL_ROOT_PASSWORD:?}"
+: "${MYSQL_PASSWORD:?}"
 : "${RUNTIME_DATABASE_PASSWORD:?}"
-psql --no-psqlrc --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set=ON_ERROR_STOP=1 <<'SQL'
-\getenv runtime_password RUNTIME_DATABASE_PASSWORD
-BEGIN;
-SELECT 'CREATE ROLE done_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS'
-WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='done_runtime') \gexec
-SELECT format('ALTER ROLE done_runtime WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD %L', :'runtime_password') \gexec
-REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public TO done_runtime;
-GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO done_runtime;
-GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA public TO done_runtime;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO done_runtime;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE,SELECT ON SEQUENCES TO done_runtime;
-DO $$ BEGIN
-  IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
-    REVOKE ALL ON public.flyway_schema_history FROM done_runtime;
-  END IF;
-END $$;
-COMMIT;
+# NO_BACKSLASH_ESCAPES plus doubled quotes safely quotes arbitrary password text.
+quote() { printf '%s' "$1" | sed "s/'/''/g"; }
+admin_password=$(quote "$MYSQL_PASSWORD")
+runtime_password=$(quote "$RUNTIME_DATABASE_PASSWORD")
+MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --binary-mode --user=root --database=done_db <<SQL
+SET SESSION sql_mode='NO_BACKSLASH_ESCAPES,STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION';
+CREATE USER IF NOT EXISTS 'done_admin'@'%' IDENTIFIED BY '$admin_password';
+ALTER USER 'done_admin'@'%' IDENTIFIED BY '$admin_password';
+GRANT ALL PRIVILEGES ON done_db.* TO 'done_admin'@'%' WITH GRANT OPTION;
+CREATE USER IF NOT EXISTS 'done_runtime'@'%' IDENTIFIED BY '$runtime_password';
+ALTER USER 'done_runtime'@'%' IDENTIFIED BY '$runtime_password';
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'done_runtime'@'%';
 SQL
+# The prod Flyway callback grants domain-table DML after migrations, excluding its history.

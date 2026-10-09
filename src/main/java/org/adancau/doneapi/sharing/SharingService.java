@@ -117,7 +117,7 @@ public class SharingService {
   @Transactional
   public LiveActivityShareDTO createProjection(CreateProjection r) {
     anonymous();var snapshot=validate(r.snapshot());
-    jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtext(?))","done-share-create");
+    jdbc.queryForList("SELECT lock_name FROM application_locks WHERE lock_name=? FOR UPDATE","done-share-create");
     var existing=shares.findByCommandId(r.commandId());
     if (existing.isPresent()) { authorize(existing.get(),"Bearer "+r.writeKey());active(existing.get());return view(existing.get()); }
     shares.deleteExpired(clock.instant());

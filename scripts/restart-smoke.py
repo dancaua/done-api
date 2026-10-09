@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Boot the packaged app twice against a disposable PostgreSQL database.
+"""Boot the packaged app twice against a disposable MySQL database.
 Requires DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD and a Java 21 runtime.
 Never run this against a production database. A test account is removed on success.
 """
@@ -8,7 +8,7 @@ import os,subprocess,time,json,urllib.request,uuid,socket,tempfile,base64,secret
 root=Path(__file__).resolve().parent.parent
 jar=root/'target/done-api-0.0.1-SNAPSHOT.jar'
 if not jar.exists(): raise SystemExit('Build first: ./mvnw package')
-if not os.environ.get('DATABASE_URL'): raise SystemExit('Set DATABASE_URL to a disposable PostgreSQL database')
+if not os.environ.get('DATABASE_URL'): raise SystemExit('Set DATABASE_URL to a disposable MySQL database')
 with socket.socket() as s:
     s.bind(('127.0.0.1',0));port=s.getsockname()[1]
 env=dict(os.environ,PORT=str(port),JWT_SECRET=base64.b64encode(secrets.token_bytes(32)).decode(),APPLE_ENABLED='false')

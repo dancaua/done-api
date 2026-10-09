@@ -40,12 +40,12 @@ The admission filter is registered once per request, inside both Spring Security
 | Request body | 65,536 bytes, including chunked requests |
 | Headers / authorization header | 16 KB / 8,192 characters |
 | JSON nesting / number / field name / string | 32 / 100 / 1,024 / 32,768 characters; duplicate keys and trailing documents rejected |
-| PostgreSQL statement / lock / idle transaction | 15 / 5 / 20 seconds |
+| MySQL SELECT / row lock / socket | 15 / 5 / 20 seconds |
 | SMTP connect/read/write | 5 seconds each |
 
-`app.rate.*` contains configurable IP/global/concurrency defaults; account/export caps are intentionally small constants in `AccountRateFilter`. Production refuses to start with the admission limiter disabled. In-memory limits reset on process restart and apply per instance; account login/recovery limits live in PostgreSQL and are shared across instances. A multi-instance deployment must additionally enforce aggregate limits at a trusted edge gateway, or replace the local admission store with a shared low-latency limiter.
+`app.rate.*` contains configurable IP/global/concurrency defaults; account/export caps are intentionally small constants in `AccountRateFilter`. Production refuses to start with the admission limiter disabled. In-memory limits reset on process restart and apply per instance; account login/recovery limits live in MySQL and are shared across instances. A multi-instance deployment must additionally enforce aggregate limits at a trusted edge gateway, or replace the local admission store with a shared low-latency limiter.
 
-The configured stack exposes only Caddy. PostgreSQL/API ports are internal. Caddy limits bodies, headers and request duration. Tomcat limits connections, threads, queues, keepalive and upload stalls. Containers have CPU/memory/process budgets. Caddy's error logger redacts URI/headers; access logging is not enabled. Do not enable request/body/header debug logs for authentication, reset, or share routes.
+The configured stack exposes only Caddy. MySQL/API ports are internal. Caddy limits bodies, headers and request duration. Tomcat limits connections, threads, queues, keepalive and upload stalls. Containers have CPU/memory/process budgets. Caddy's error logger redacts URI/headers; access logging is not enabled. Do not enable request/body/header debug logs for authentication, reset, or share routes.
 
 **Volumetric DDoS must be handled upstream.** Use the hosting provider's DDoS service/CDN/WAF, rate rules on authentication/recovery, and a firewall allowing origin traffic only from the selected edge. Trust only that provider's verified proxy ranges; currently Tomcat trusts only the stack's Caddy IP and Caddy ignores client-supplied forwarding headers. Do not blindly trust `X-Forwarded-For` or publish the API port. Avoid destructive load testing against production.
 
@@ -53,11 +53,15 @@ The configured stack exposes only Caddy. PostgreSQL/API ports are internal. Cadd
 
 Repository JPQL uses bound parameters and every new JDBC query uses placeholders. User text is never concatenated into SQL or used as an identifier/order expression. Negative tests store SQL-looking appliance names literally and verify that users/tables/ownership remain intact. Existing UUID validation, DTO validation, unknown-field rejection, owner predicates and FK constraints cover the tested access paths. This is code review plus regression evidence, not proof that all future code will be safe.
 
-Production uses `done_runtime` for JPA/JDBC, with SELECT/INSERT/UPDATE/DELETE and sequence access only. It has no superuser, role/database creation, schema creation, ownership or RLS-bypass privileges. Flyway connects separately as the schema owner via `MIGRATION_DATABASE_USER` / `MIGRATION_DATABASE_PASSWORD`. An after-migrate callback removes runtime access to Flyway history. A production startup check rejects an overly privileged runtime principal.
+Production uses MySQL `done_runtime` with SELECT/INSERT/UPDATE/DELETE on explicit domain tables only. It has no global/schema-level privileges, roles, GRANT OPTION, DDL, or access to Flyway history. Flyway uses a separate `done_admin` via `MIGRATION_DATABASE_USER` / `MIGRATION_DATABASE_PASSWORD`; its after-migrate callback grants access to new domain tables. Startup checks the effective grants and active roles.
 
-`deploy/provision-runtime-role.sh` safely quotes the password with PostgreSQL `format(%L)`. It is idempotent, runs for a fresh production DB, and is also run by `scripts/production.sh` for existing volumes. Set **different** random `DATABASE_PASSWORD` (owner) and `RUNTIME_DATABASE_PASSWORD` values. Existing migrations V1–V9 retain their bytes and TIMESTAMP columns; V10 adds recovery tables. No Flyway repair, old migration rewrite or schema timestamp conversion is performed. JDBC recovery/rate/cleanup timestamps are bound explicitly as UTC LocalDateTime so TIMESTAMP comparisons do not depend on the host JVM timezone.
+`deploy/provision-runtime-role.sh` uses the container's root account for account provisioning only, SQL `NO_BACKSLASH_ESCAPES` and doubled quotes for password literals. Secrets use stdin/environment rather than process arguments. Set three different random `MYSQL_ROOT_PASSWORD`, `DATABASE_PASSWORD`, and `RUNTIME_DATABASE_PASSWORD` values. Production runtime does not receive the root credential.
 
-Do not grant additional roles, table ownership, schema CREATE or access to migration history to the runtime principal. Back up before upgrading an existing deployment and validate on a restored staging database first, especially if its V1 checksum differs from this repository's documented baseline.
+MySQL baseline `db/mysql/V1__mysql_schema.sql` contains the complete schema, including recovery. PostgreSQL migrations V1–V10 are retained byte-for-byte, excluded from active Flyway locations. No PostgreSQL data transfer, repair, old migration rewrite or destructive cleanup is performed. TIMESTAMP(6) and JDBC are UTC; JPA UUIDs and parameterized JDBC UUID values both use CHAR(36). InnoDB transactions use READ COMMITTED, with finite connection/socket/query/lock timeouts. Persistent rate counters use a locked upsert + read within one transaction; row locks replace advisory locks. Recovery jobs use SELECT FOR UPDATE SKIP LOCKED and a lease update within the same transaction.
+
+MySQL ownership triggers preserve program/session and share invariants. They need `log_bin_trust_function_creators=ON` when binary logging is enabled; the administrator setup script and Compose configure this explicitly. Runtime cannot create triggers/routines. Generated discriminator columns enforce one open session and one active owned share; utf8mb4 tables and full-value hash indexes preserve Unicode names without prefix truncation. MySQL DDL is not transactional: on a failed migration, inspect and reconcile the schema before retrying, never automatically repair or drop live tables.
+
+Production DB TLS defaults to REQUIRED for the private Compose network. External managed MySQL should use VERIFY_IDENTITY with its CA configured for both runtime and Flyway. Multi-statements and LOCAL INFILE remain disabled. See the README for ignored local properties; no database passwords or JWT secrets are committed or packaged.
 
 ## Password recovery contract
 
@@ -146,3 +150,6 @@ The initial OSV scan reported 10 advisories across three runtime artifacts. The 
 ### Validation record — 9 October 2026
 
 Java 21 + PostgreSQL 16: **82 tests passed**, including the existing application E2E suite and the new security/recovery checks. The final OSV query checked **107 runtime Maven packages and returned no matching advisories** after the patch overrides. Caddy configuration and the production preflight/Compose file validate; the container starts with a read-only filesystem/non-root user and `done_runtime`, whose effective DDL/admin/Flyway-history privileges were checked as absent. The browser recovery pages were inspected in Romanian and all nine language catalogs passed key/syntax checks. SMTP sending was exercised against a real loopback test SMTP server, not a live provider.
+
+
+MySQL verification supersedes the historical PostgreSQL results above; see the current README for the executed MySQL checks.

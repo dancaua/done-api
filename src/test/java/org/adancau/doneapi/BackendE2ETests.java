@@ -20,7 +20,7 @@ import org.springframework.context.annotation.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.*;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.mysql.MySQLContainer;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -40,7 +40,7 @@ import tools.jackson.databind.json.JsonMapper;
     })
 @Import(BackendE2ETests.TestTime.class)
 class BackendE2ETests {
-  private static PostgreSQLContainer postgres;
+  private static MySQLContainer mysql;
   private static final TestSmtpServer smtp=new TestSmtpServer();
 
   @DynamicPropertySource
@@ -57,10 +57,10 @@ class BackendE2ETests {
           "spring.datasource.password",
           () -> System.getenv().getOrDefault("TEST_DATABASE_PASSWORD", ""));
     } else {
-      if (postgres==null) { postgres = new PostgreSQLContainer("postgres:16-alpine"); postgres.start(); }
-      p.add("spring.datasource.url", postgres::getJdbcUrl);
-      p.add("spring.datasource.username", postgres::getUsername);
-      p.add("spring.datasource.password", postgres::getPassword);
+      if (mysql==null) { mysql = new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=ON"); mysql.start(); }
+      p.add("spring.datasource.url", mysql::getJdbcUrl);
+      p.add("spring.datasource.username", mysql::getUsername);
+      p.add("spring.datasource.password", mysql::getPassword);
     }
   }
 
@@ -117,7 +117,9 @@ class BackendE2ETests {
 
   @BeforeEach
   void resetState() {
-    jdbc.execute("TRUNCATE app_users,apple_challenges,auth_rate_buckets,session_shares,recovery_mail_queue CASCADE");
+    // DELETE with FK checks enabled verifies the same cascades as account/appliance deletion.
+    for(String table:List.of("session_shares","activity_events","appliance_sessions","programs","appliances","households","app_users","apple_challenges","auth_rate_buckets","recovery_mail_queue"))
+      jdbc.update("DELETE FROM "+table);
     clock.now = Instant.parse("2026-10-05T12:00:00Z");
     reset(apple);
     smtp.messages.clear();smtp.rejectNext=false;
@@ -709,7 +711,7 @@ class BackendE2ETests {
             UUID.fromString(u.id()),
             UUID.fromString(mutation)));
     jdbc.update(
-        "UPDATE mutation_receipts SET response_json = (response_json::jsonb - 'language')::text"
+        "UPDATE mutation_receipts SET response_json = JSON_REMOVE(response_json, '$.language')"
             + " WHERE user_id = ? AND request_id = ?",
         UUID.fromString(u.id()),
         UUID.fromString(mutation));
@@ -968,6 +970,33 @@ class BackendE2ETests {
         200, "POST", "/auth/login", Map.of("email", u.email(), "password", PASSWORD), null, null);
     for (int i = 0; i < 3; i++) assertTrue(rates.consume("direct", 3));
     assertFalse(rates.consume("direct", 3));
+  }
+
+  @Test
+  void mysqlRateLimitUpsertIsAtomicAcrossConcurrentRequests() throws Exception {
+    try(var pool=Executors.newFixedThreadPool(8)) {
+      var start=new CountDownLatch(1);
+      var attempts=new ArrayList<Future<Boolean>>();
+      for(int i=0;i<16;i++)attempts.add(pool.submit(() -> { start.await();return rates.consume("mysql-concurrency",5); }));
+      start.countDown();int allowed=0;
+      for(var attempt:attempts)if(attempt.get(10,TimeUnit.SECONDS))allowed++;
+      assertEquals(5,allowed);
+    }
+    clock.advance(301);assertTrue(rates.consume("mysql-concurrency",5));
+  }
+
+  @Test
+  void mysqlProgramOwnershipAndOpenSessionConstraintsApplyOutsideJpa() {
+    var one=user();var two=user();var a=device(one,"washer");var b=device(two,"washer");
+    var session=expect(201,"POST","/appliances/"+a.get("id").asText()+"/sessions",Map.of("programId",a.get("programs").get(0).get("id").asText()),one.token(),key());
+    assertThrows(org.springframework.dao.DataIntegrityViolationException.class,() -> jdbc.update(
+        "UPDATE appliance_sessions SET program_id=? WHERE id=?",b.get("programs").get(0).get("id").asText(),session.get("id").asText()));
+    assertThrows(org.springframework.dao.DataIntegrityViolationException.class,() -> jdbc.update(
+        "INSERT INTO appliance_sessions(id,user_id,appliance_id,program_name,minutes,mode,started_at) VALUES (?,?,?,'Second',0,'stopwatch',?)",
+        UUID.randomUUID(),one.id(),a.get("id").asText(),org.adancau.doneapi.common.DatabaseTime.at(clock.instant())));
+    jdbc.update("DELETE FROM programs WHERE id=?",a.get("programs").get(0).get("id").asText());
+    assertNull(jdbc.queryForObject("SELECT program_id FROM appliance_sessions WHERE id=?",String.class,session.get("id").asText()));
+    assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM appliance_sessions WHERE id=?",Integer.class,session.get("id").asText()));
   }
 
   @Test
@@ -1346,77 +1375,11 @@ class BackendE2ETests {
   }
 
   @Test
-  void householdMigrationPreservesPreexistingAccountsAppliancesAndSessions() throws Exception {
-    String schema = "legacy_" + UUID.randomUUID().toString().replace("-", "");
-    try (var connection = jdbc.getDataSource().getConnection();
-        var statement = connection.createStatement()) {
-      statement.execute("CREATE SCHEMA " + schema);
-      try {
-        connection.setSchema(schema);
-        for (String file :
-            List.of(
-                "V1__accounts_and_sessions.sql",
-                "V2__auth_rate_limits.sql",
-                "V3__tenant_integrity.sql",
-                "V4__preferred_language.sql")) {
-          try (var input = getClass().getResourceAsStream("/db/migration/" + file)) {
-            statement.execute(
-                new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
-          }
-        }
-        UUID userId = UUID.randomUUID(),
-            applianceId = UUID.randomUUID(),
-            sessionId = UUID.randomUUID();
-        statement.execute(
-            "INSERT INTO app_users(id,display_name,created_at) VALUES ('"
-                + userId
-                + "','Legacy',now())");
-        statement.execute(
-            "INSERT INTO appliances(id,user_id,name,kind,created_at) VALUES ('"
-                + applianceId
-                + "','"
-                + userId
-                + "','Washer','washer',now())");
-        statement.execute(
-            "INSERT INTO"
-                + " appliance_sessions(id,user_id,appliance_id,program_name,minutes,mode,started_at,expected_end,completed_at)"
-                + " VALUES ('"
-                + sessionId
-                + "','"
-                + userId
-                + "','"
-                + applianceId
-                + "','Cotton',30,'countdown',now()-interval '1 hour',now()-interval '30"
-                + " minutes',now())");
-        try (var input = getClass().getResourceAsStream("/db/migration/V5__households.sql")) {
-          statement.execute(
-              new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
-        }
-        statement.execute("UPDATE app_users SET notifications_enabled=false");
-        try (var input =
-            getClass().getResourceAsStream("/db/migration/V6__appliance_notifications.sql")) {
-          statement.execute(
-              new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
-        }
-        try (var result =
-            statement.executeQuery(
-                "SELECT a.household_id,h.user_id,s.id,a.notifications_enabled,(SELECT"
-                    + " notifications_enabled FROM app_users WHERE id=a.user_id) FROM appliances a"
-                    + " JOIN households h ON h.id=a.household_id JOIN appliance_sessions s ON"
-                    + " s.appliance_id=a.id")) {
-          assertTrue(result.next());
-          assertEquals(userId, result.getObject(1, UUID.class));
-          assertEquals(userId, result.getObject(2, UUID.class));
-          assertEquals(sessionId, result.getObject(3, UUID.class));
-          assertTrue(result.getBoolean(4));
-          assertFalse(result.getBoolean(5));
-          assertFalse(result.next());
-        }
-      } finally {
-        connection.setSchema("public");
-        statement.execute("DROP SCHEMA " + schema + " CASCADE");
-      }
-    }
+  void mysqlBaselineHasAppliedAndKeepsUtf8mb4EvenWithLegacyDatabaseDefaults() {
+    assertEquals("1",jdbc.queryForObject("SELECT version FROM flyway_schema_history WHERE success=1 AND version IS NOT NULL ORDER BY installed_rank DESC LIMIT 1",String.class));
+    assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME<>'flyway_schema_history' AND TABLE_COLLATION NOT LIKE 'utf8mb4%'",Integer.class));
+    assertEquals("+00:00",jdbc.queryForObject("SELECT @@session.time_zone",String.class));
+    assertEquals("READ-COMMITTED",jdbc.queryForObject("SELECT @@transaction_isolation",String.class));
   }
 
   @Test
@@ -1589,8 +1552,7 @@ class BackendE2ETests {
             UUID.fromString(u.id()),
             UUID.fromString(mutation)));
     jdbc.update(
-        "UPDATE mutation_receipts SET response_json=(response_json::jsonb -"
-            + " 'notificationsEnabled')::text WHERE user_id=? AND request_id=?",
+        "UPDATE mutation_receipts SET response_json=JSON_REMOVE(response_json, '$.notificationsEnabled') WHERE user_id=? AND request_id=?",
         UUID.fromString(u.id()),
         UUID.fromString(mutation));
     var retry = expect(201, "POST", "/appliances", request, u.token(), mutation);

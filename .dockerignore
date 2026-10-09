@@ -6,3 +6,5 @@ target
 secrets
 *.p8
 *.log
+
+config/local.properties

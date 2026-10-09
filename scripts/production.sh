@@ -7,5 +7,5 @@ docker compose --env-file .env.production -f compose.production.yaml config --qu
 docker compose --env-file .env.production -f compose.production.yaml build api
 # This also upgrades existing volumes, for which initdb scripts do not run again.
 docker compose --env-file .env.production -f compose.production.yaml up -d --wait db
-docker compose --env-file .env.production -f compose.production.yaml exec -T db sh /docker-entrypoint-initdb.d/10-runtime-role.sh
+docker compose --env-file .env.production -f compose.production.yaml exec -T db sh /opt/done/provision-runtime-role.sh
 exec docker compose --env-file .env.production -f compose.production.yaml up -d --no-build

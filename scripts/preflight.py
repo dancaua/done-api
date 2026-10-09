@@ -32,9 +32,9 @@ if len(values.get('DATABASE_PASSWORD',''))<24: errors.append('DATABASE_PASSWORD 
 def secret(key):
     try: return len(base64.b64decode(values.get(key,''),validate=True))
     except Exception: return 0
-for key in ('RUNTIME_DATABASE_PASSWORD','SMTP_PASSWORD'):
-    if len(values.get(key,''))< (24 if key=='RUNTIME_DATABASE_PASSWORD' else 1): errors.append(f'Configure {key}.')
-if values.get('RUNTIME_DATABASE_PASSWORD')==values.get('DATABASE_PASSWORD'): errors.append('Use different runtime and migration database passwords.')
+for key in ('MYSQL_ROOT_PASSWORD','RUNTIME_DATABASE_PASSWORD','SMTP_PASSWORD'):
+    if len(values.get(key,''))< (1 if key=='SMTP_PASSWORD' else 24): errors.append(f'Configure {key}.')
+if len({values.get(k) for k in ('MYSQL_ROOT_PASSWORD','DATABASE_PASSWORD','RUNTIME_DATABASE_PASSWORD')})!=3: errors.append('Use different runtime and migration database passwords.')
 for key in ('RECOVERY_FROM','SMTP_HOST','SMTP_USERNAME'):
     if placeholder(values.get(key,'')): errors.append(f'Configure a real {key}.')
 if not re.fullmatch(r'[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+',values.get('RECOVERY_FROM','')): errors.append('Invalid RECOVERY_FROM.')

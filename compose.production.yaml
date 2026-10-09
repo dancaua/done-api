@@ -1,19 +1,21 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: mysql:8.4
+    command: ["--log-bin-trust-function-creators=ON"]
     mem_limit: 768m
     cpus: 1.0
     pids_limit: 128
     environment:
-      POSTGRES_DB: done
-      POSTGRES_USER: done
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MySQL root password}
+      MYSQL_DATABASE: done_db
+      MYSQL_USER: done_admin
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
       RUNTIME_DATABASE_PASSWORD: ${RUNTIME_DATABASE_PASSWORD:?Set runtime database password}
     volumes:
-      - done-postgres:/var/lib/postgresql/data
-      - ./deploy/provision-runtime-role.sh:/docker-entrypoint-initdb.d/10-runtime-role.sh:ro
+      - done-mysql:/var/lib/mysql
+      - ./deploy/provision-runtime-role.sh:/opt/done/provision-runtime-role.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U done -d done"]
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql --user=$$MYSQL_USER --database=$$MYSQL_DATABASE --execute='SELECT 1' --silent > /dev/null"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -31,10 +33,10 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       PORT: 8080
-      DATABASE_URL: jdbc:postgresql://db:5432/done
+      DATABASE_URL: jdbc:mysql://db:3306/done_db
       DATABASE_USER: done_runtime
       DATABASE_PASSWORD: ${RUNTIME_DATABASE_PASSWORD:?Set runtime database password}
-      MIGRATION_DATABASE_USER: done
+      MIGRATION_DATABASE_USER: done_admin
       MIGRATION_DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
       JWT_SECRET: ${JWT_SECRET:?Set production signing key}
       JWT_ISSUER: ${JWT_ISSUER:-done-api}
@@ -101,6 +103,6 @@ networks:
       config:
         - subnet: 172.30.80.0/24
 volumes:
-  done-postgres:
+  done-mysql:
   caddy-data:
   caddy-config:

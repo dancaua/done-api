@@ -2,7 +2,7 @@
 
 ## Ce rulează
 
-O singură aplicație Spring Boot: REST, paginile `/privacy`, `/support`, `/contact`, `/delete-account`, statusul `/share/{token}` și workerul de evenimente. PostgreSQL 16 stochează datele; Flyway V1–V9 rulează la startup, Hibernate validează. iOS rămâne local până la integrarea ulterioară.
+O singură aplicație Spring Boot: REST, paginile `/privacy`, `/support`, `/contact`, `/delete-account`, statusul `/share/{token}` și workerul de evenimente. MySQL 8.4 stochează datele; Flyway `db/mysql/V1__mysql_schema.sql` rulează la startup, Hibernate validează. iOS rămâne local până la integrarea ulterioară.
 
 Operatorul, adresa, emailurile și hostingul sunt mock numai în mediul local. Profilul `prod` refuză mockurile și originurile fără HTTPS. Nu sunt publicate date inventate.
 
@@ -37,7 +37,7 @@ Compose rezervă subnetul `172.30.80.0/24`; dacă hostul îl folosește deja, al
 
 După deploy, verifică `/actuator/health/readiness`, `/actuator/health/liveness`, cele patru pagini, login, lifecycle, partajare și ștergerea unui **cont de test creat pentru această verificare**. Preflight verifică valorile și lungimea cheilor; nu probează DNS, Apple, emailurile sau caracterul random al secretelor. Exemplele production sunt intenționat incomplete și trebuie să eșueze preflight.
 
-Pentru alt hosting, folosește imaginea Docker/JAR cu `SPRING_PROFILES_ACTIVE=prod`, PostgreSQL 16 și un reverse proxy HTTPS explicit de încredere. Păstrează probele readiness numai după conectarea DB. Serviciul are graceful shutdown de 20 secunde și containerul așteaptă 30 secunde.
+Pentru alt hosting, folosește imaginea Docker/JAR cu `SPRING_PROFILES_ACTIVE=prod`, MySQL 8.4 și un reverse proxy HTTPS explicit de încredere. Păstrează probele readiness numai după conectarea DB. Serviciul are graceful shutdown de 20 secunde și containerul așteaptă 30 secunde.
 
 ## Apple nativ și ștergere web
 
@@ -54,22 +54,22 @@ Backendul acceptă numai App ID-ul nativ sau Services ID-ul configurat, verific�
 
 ## Backup, restore și ștergere
 
-Producția necesită backup automat pe storage criptat, în afara hostului și a volumului live. Pentru o arhivă PostgreSQL cu permisiuni restrictive:
+Producția necesită backup automat pe storage criptat, în afara hostului și a volumului live. Pentru o arhivă MySQL cu permisiuni restrictive:
 
 ```bash
 BACKUP_DIR=/cale/storage-criptat ./scripts/backup.sh
 ```
 
-Scriptul face pg_dump și verifică arhiva; nu configurează un scheduler, nu criptează singur storage-ul și nu restaurează peste DB live. Operatorul stabilește frecvența, verifică backupurile, aplică rotația în limita `BACKUP_RETENTION_DAYS` și configurează alerte pentru eșec. Păstrează separat un registru operațional protejat al cererilor de ștergere pentru reconcilierea backupurilor restaurate, cu retenție limitată.
+Scriptul face mysqldump într-o tranzacție consistentă și verifică gzip; nu configurează un scheduler, nu criptează singur storage-ul și nu restaurează peste DB live. Operatorul stabilește frecvența, verifică backupurile, aplică rotația în limita `BACKUP_RETENTION_DAYS` și configurează alerte pentru eșec. Păstrează separat un registru operațional protejat al cererilor de ștergere pentru reconcilierea backupurilor restaurate, cu retenție limitată.
 
-Restore-ul se testează periodic într-o bază izolată, cu aceeași versiune PostgreSQL și cod compatibil. Înainte ca o restaurare să servească trafic, reaplică ștergerile și revocările ulterioare backupului din registrul operațional. Nu reactiva automat identități, tokenuri sau linkuri șterse. Fără această procedură validată, nu declara politica de backup pregătită pentru producție.
+Restore-ul se testează periodic într-o bază izolată, cu aceeași versiune MySQL și cod compatibil. Înainte ca o restaurare să servească trafic, reaplică ștergerile și revocările ulterioare backupului din registrul operațional. Nu reactiva automat identități, tokenuri sau linkuri șterse. Fără această procedură validată, nu declara politica de backup pregătită pentru producție.
 
 Fă backup înainte de migrare. Nu edita migrări Flyway deja aplicate și nu activa `clean` sau Hibernate create/update. După o migrare incompatibilă, rollbackul codului necesită verificarea compatibilității schemei; restaurarea unui backup cere reconciliere înainte de acces public.
 
 ## Verificare reproductibilă
 
 ```bash
-./scripts/test.sh                  # PostgreSQL 16 izolat, Testcontainers
+./scripts/test.sh                  # MySQL 8.4 izolat, Testcontainers
 ./scripts/update-openapi.sh        # contract generat din rute + records
 node scripts/check-site.mjs        # sintaxă/cataloguri publice
 ./mvnw -B verify
@@ -84,7 +84,7 @@ Codul backend și paginile sunt implementate. Nu s-a făcut deploy public. Datel
 Pentru App Store trebuie adăugată și ștergerea **în aplicație**, la conectarea iOS; pagina web este complementară. Referințe: [privacy URL Apple](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy), [cerințele de ștergere Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/). Textele locale mock nu reprezintă identificarea unui operator real.
 
 
-## Decizie de schemă păstrată: TIMESTAMP în V1
+## Istoric PostgreSQL (arhivat, nu este deploy-ul curent)
 
 La 8 octombrie 2026, proprietarul proiectului a ales păstrarea modificării V1 de la `TIMESTAMPTZ` la `TIMESTAMP`, cu discutarea schimbării schemei separat. Verificarea clean din folderul canonical trece cele 63 de teste pe o bază PostgreSQL 16 nouă cu această variantă. JDBC/Hibernate folosește UTC; migrările ulterioare existente pot conține în continuare TIMESTAMPTZ.
 
@@ -92,4 +92,13 @@ La 8 octombrie 2026, proprietarul proiectului a ales păstrarea modificării V1 
 
 ## Security configuration update
 
-Read [security.md](security.md) before the next deployment. `scripts/production.sh` now provisions the restricted `done_runtime` role even on an existing volume, then starts the API with separate Flyway credentials. Add `RUNTIME_DATABASE_PASSWORD` and the SMTP sender/credentials to `.env.production`; the preflight and production startup guards enforce the new requirements. The owner password is still required for migrations. A fresh deploy runs the role script automatically too. Do not expose PostgreSQL/API ports or trust arbitrary forwarding headers. Caddy has body/header/time budgets and containers have resource limits; volumetric DDoS protection remains an upstream provider responsibility.
+Read [security.md](security.md) before the next deployment. `scripts/production.sh` now provisions the restricted `done_runtime` role even on an existing volume, then starts the API with separate Flyway credentials. Add `RUNTIME_DATABASE_PASSWORD` and the SMTP sender/credentials to `.env.production`; the preflight and production startup guards enforce the new requirements. The owner password is still required for migrations. A fresh deploy runs the role script automatically too. Do not expose MySQL/API ports or trust arbitrary forwarding headers. Caddy has body/header/time budgets and containers have resource limits; volumetric DDoS protection remains an upstream provider responsibility.
+
+
+## Configurația MySQL curentă
+
+Vezi README pentru pornire locală, inclusiv Run din IDE. Nu aplica migrările arhivate PostgreSQL unei baze MySQL. MySQL are baseline propriu; datele PostgreSQL existente necesită un proiect separat de transfer și validare, fără repair automat.
+
+Compose folosește MySQL 8.4, volum `done-mysql`, `log_bin_trust_function_creators=ON` pentru trigger-ele de integritate și port DB nepublic în producție. `MYSQL_ROOT_PASSWORD`, `DATABASE_PASSWORD` (done_admin/migrări) și `RUNTIME_DATABASE_PASSWORD` trebuie să fie diferite. Root este folosit numai în containerul DB pentru provisionarea conturilor. `production.sh` rulează provisionarea după healthcheck, inclusiv pe volume existente. Callbackul Flyway din profilul prod acordă runtime-ului doar DML pe fiecare tabel de domeniu, excluzând istoricul. Guardul de startup refuză privilegii globale, la nivel de schemă, roluri și GRANT OPTION.
+
+JDBC păstrează UTC, timeouts finite, `allowMultiQueries=false` și `allowLoadLocalInfile=false`. În prod TLS DB este obligatoriu (`REQUIRED`) pe rețeaua Docker privată. Pentru un serviciu DB extern configurează CA/truststore și `DATABASE_SSL_MODE=VERIFY_IDENTITY`, inclusiv pentru conexiunea Flyway. Nu publica portul MySQL pe internet.

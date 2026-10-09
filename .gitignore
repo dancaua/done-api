@@ -51,3 +51,6 @@ backups/
 *.pfx
 *.pem
 *.key
+
+# Generated local Spring properties with credentials; kept outside the jar.
+/config/local.properties

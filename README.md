@@ -1,59 +1,69 @@
 # DONE. backend
 
-Backendul Spring Boot 4.1.1 / Java 21 păstrează conturile, casele, aparatele, programele, sesiunile și activitatea în PostgreSQL. Flyway gestionează schema; Hibernate doar o validează. Contractul include 55 de operații JSON și 8 rute HTML, documentate în [OpenAPI 3.1](docs/openapi.json), importabil în Postman sau un editor OpenAPI.
+Backendul Spring Boot 4.1.1 / Java 21 păstrează conturile, casele, aparatele, programele, sesiunile și activitatea în MySQL. Flyway gestionează schema; Hibernate doar o validează. Contractul include 55 de operații JSON și 8 rute HTML, documentate în [OpenAPI 3.1](docs/openapi.json), importabil în Postman sau un editor OpenAPI.
 
-## Pornire locală
+## Pornire locală: MySQL existent
 
-Cu Docker pornit și Java 21 instalat:
+Necesită Java 21 și MySQL 8.4+ (MySQL 9.x folosește același dialect). Baza: `done_db`; contul local din script: `done_admin`.
+
+1. Creează/verifică baza cu un cont MySQL administrator:
 
 ```bash
-cd /Users/adancau/dev/done-arch/done-api/done-api
+mysql -u root -p < scripts/create-database.sql
+```
+
+Scriptul păstrează baza, datele și parolele conturilor deja existente. Folosește utf8mb4 pentru baze noi; tabelele Flyway setează explicit utf8mb4 și într-o bază mai veche creată cu utf8. Activează persistent `log_bin_trust_function_creators` pentru trigger-ele de integritate; necesită drepturi de administrator. Nu dezactivează binary logging. Parola `done_pass` este exclusiv pentru un cont nou de dezvoltare; dacă acel cont există, folosește parola lui reală. Scriptul nu acordă privilegii globale sau GRANT OPTION contului aplicației.
+
+2. Configurează fișierul local `.env` (ignorat de Git):
+
+```dotenv
+DATABASE_URL=jdbc:mysql://localhost:3306/done_db
+DATABASE_USER=done_admin
+DATABASE_PASSWORD=parola_locala
+```
+
+Păstrează și cheia `JWT_SECRET` existentă. Pentru un checkout nou, `./scripts/init-env.sh` creează `.env` și chei aleatoare; înlocuiește parola DB generată cu parola contului MySQL existent. Citează valorile care conțin spații sau caractere shell. Nu comite parolele în properties.
+
+3. Pentru Run direct din IntelliJ:
+
+```bash
+python3 scripts/configure-local.py
+```
+
+Acesta generează `config/local.properties`, cu permisiuni `0600`, ignorat de Git/Docker și neîmpachetat în JAR. `application.properties` îl importă automat, numai în afara profilului `prod`. Rulează `DoneApiApplication`, JDK 21, working directory rădăcina backendului. După schimbarea `.env`, regenerează fișierul. Variabilele de mediu explicite au prioritate.
+
+Pentru terminal:
+
+```bash
 ./scripts/dev.sh
 ```
 
-Scriptul creează o singură dată `.env`, cu parolă DB și două chei aleatoare, permisiuni `0600`. Pornește PostgreSQL din Compose, apoi aplicația pe `http://localhost:8080`. Pe macOS selectează automat un JDK 21. La următoarele porniri păstrează `.env` și volumul DB.
+Folosește MySQL existent; nu pornește Docker implicit. API: `http://localhost:8080`, health: `http://localhost:8080/actuator/health`. Flyway rulează automat, Hibernate doar validează.
 
-Pentru ambele servicii în Docker:
+## MySQL izolat în Docker
 
 ```bash
 ./scripts/init-env.sh
+./scripts/dev.sh --docker
+# Sau ambele servicii:
 docker compose up --build
 ```
 
-Oprire cu `docker compose stop`; volumul `done-postgres` păstrează datele. API-ul și PostgreSQL sunt publicate numai pe localhost în Compose. Health: `GET /actuator/health`, inclusiv verificarea DB. Dockerfile rulează aplicația ca utilizator fără privilegii.
+Compose publică MySQL pe `127.0.0.1:3307` implicit, separat de serverul local 3306, și API pe localhost:8080. Configurează `MYSQL_ROOT_PASSWORD` separat în `.env` dacă fișierul este mai vechi. Datele sunt în volumul nou `done-mysql`; volumele PostgreSQL vechi nu sunt șterse sau reutilizate.
 
-Pentru o bază PostgreSQL existentă, setează `DATABASE_URL` ca URL **JDBC**, `DATABASE_USER`, `DATABASE_PASSWORD`, `JWT_SECRET` base64 de minimum 32 de octeți și pornește `./mvnw spring-boot:run` cu Java 21. Nu activa generarea schemei Hibernate. Flyway rulează migrările la startup; modificările viitoare se adaugă în fișiere noi.
-
-## Crearea bazei și rularea tuturor migrărilor
-
-Pentru PostgreSQL local/existent, creează baza separat de migrări:
+## Rularea migrărilor
 
 ```bash
-psql -X -h localhost -p 5432 -U done -d postgres -f scripts/create-database.sql
 ./scripts/migrate.sh
+./scripts/migrate.sh info
+./scripts/migrate.sh validate
 ```
 
-Scriptul SQL se rulează cu **psql**, nu ca migrare Flyway. Creează `done`, cu owner `done` și encoding UTF-8, numai dacă baza lipsește. Rolul owner trebuie să existe; utilizatorul conectat trebuie să aibă dreptul `CREATEDB` și să poată atribui ownerul. `psql` cere parola dacă este necesar; poate folosi și `.pgpass`. Pentru alt nume/owner, adaugă `-v db_name=done_test -v db_owner=done_test`. Scriptul nu șterge date, nu schimbă parole și nu modifică ownerul unei baze existente.
+Scriptul citește `.env`, cu prioritate pentru variabilele exportate. Maven Flyway și aplicația folosesc aceeași locație `src/main/resources/db/mysql` și același istoric `flyway_schema_history`. Baza este selectată exclusiv de URL-ul JDBC: nu introducem `USE done_db` în migrări, care ar putea redirecționa o rulare de test/producție către altă bază. Conexiunile folosesc UTC, `TIMESTAMP(6)` și izolarea READ COMMITTED. UUID-urile sunt `CHAR(36)`, cu același JSON ca înainte.
 
-Cu PostgreSQL gestionat de Compose, baza și rolul sunt create deja de serviciul `db`:
+MySQL începe cu `V1__mysql_schema.sql`, care include întregul model actual, inclusiv recuperarea parolei. Migrările PostgreSQL V1–V10 din `db/migration` rămân neschimbate ca arhivă și nu sunt încărcate. Această schimbare nu transferă date din PostgreSQL și nu repară/șterge istoricul unei baze existente. Pentru o bază MySQL populată manual, verifică schema înainte de migrare; `baseline-on-migrate=false`, `clean-disabled=true`.
 
-```bash
-./scripts/init-env.sh
-docker compose up -d --wait db
-./scripts/migrate.sh
-```
-
-`migrate.sh` folosește Java 21, Maven Wrapper și aceeași versiune Flyway ca aplicația. Citește `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` din `.env`; variabilele exportate explicit au prioritate. Rulează toate migrările restante din `src/main/resources/db/migration` în ordine, inclusiv cele viitoare, fără să pornească API-ul. La repetare, migrările deja aplicate sunt validate și sărite, folosind același `public.flyway_schema_history` ca Spring Boot. Prima rulare Maven poate necesita acces la internet pentru plugin.
-
-```bash
-./scripts/migrate.sh info       # starea și versiunile pending/applied
-./scripts/migrate.sh validate   # verifică istoricul și checksumurile
-./scripts/migrate.sh --help
-```
-
-**Echivalentul lui `USE done`:** în PostgreSQL, baza se alege prin conexiune, aici `DATABASE_URL=jdbc:postgresql://localhost:5432/done`. Toate migrările folosesc această bază și schema `public`; scriptul setează timezone-ul conexiunii la UTC. `USE` este sintaxă MySQL, iar `\connect` este o comandă a clientului psql, incompatibilă cu executarea SQL prin Flyway/JDBC. De aceea V1–V9 rămân nemodificate, cu checksumurile și tipurile `TIMESTAMP` existente păstrate. Nu concatena fișierele pentru execuție manuală: s-ar pierde istoricul Flyway, iar pornirea ulterioară a API-ului ar încerca să creeze din nou schema.
-
-Referințe: [PostgreSQL CREATE DATABASE](https://www.postgresql.org/docs/16/sql-createdatabase.html), [psql și selectarea conexiunii](https://www.postgresql.org/docs/16/app-psql.html), [Flyway Maven](https://documentation.red-gate.com/fd/maven-goal-277579365.html).
+Referințe tehnice: [Flyway MySQL](https://documentation.red-gate.com/flyway/reference/database-driver-reference/mysql), [MySQL Connector/J și UTC](https://dev.mysql.com/doc/connector-j/en/connector-j-time-instants.html).
 
 ## Structură
 
@@ -70,6 +80,8 @@ Referințe: [PostgreSQL CREATE DATABASE](https://www.postgresql.org/docs/16/sql-
 Entitățile JPA nu sunt expuse prin API. DTO-urile sunt Java records. Toate operațiile sunt limitate la contul autentificat; un UUID care aparține altui cont răspunde `404`. Foreign keys compuse păstrează proprietarul consistent și la nivel SQL.
 
 ## Schema
+
+Schema activă MySQL este `db/mysql/V1__mysql_schema.sql`. Tabelul următor descrie evoluția arhivată PostgreSQL, inclusă în baseline-ul MySQL.
 
 | Migrare | Conținut |
 | --- | --- |
@@ -97,11 +109,11 @@ erDiagram
     APP_USERS ||--o{ MUTATION_RECEIPTS : deduplicates
 ```
 
-UUID-uri, `TIMESTAMPTZ`, indici pentru istoric și evenimente scadente, chei unice pentru nume și evenimente. Un index parțial permite exact o sesiune deschisă per aparat. Un program șters nu șterge sesiunea: numele și durata ei sunt snapshoturi. Ștergerea aparatului elimină programele, sesiunea activă și istoricul său; ștergerea contului elimină datele aferente, inclusiv tokenurile și răspunsurile cache.
+UUID-uri, `TIMESTAMP(6)` UTC, indici pentru istoric și evenimente scadente, chei unice pentru nume și evenimente. Un index unic cu un discriminator generat permite exact o sesiune deschisă per aparat. Un program șters nu șterge sesiunea: numele și durata ei sunt snapshoturi. Ștergerea aparatului elimină programele, sesiunea activă și istoricul său; ștergerea contului elimină datele aferente, inclusiv tokenurile și răspunsurile cache.
 
 ## Autentificare
 
-Emailul este username-ul, normalizat în lowercase. Parolele au 12–64 de caractere și maximum 72 de octeți UTF-8, stocate BCrypt cost 12. Backendul nu trimite emailuri de verificare sau resetare în această etapă.
+Emailul este username-ul, normalizat în lowercase. Parolele au 12–64 de caractere și maximum 72 de octeți UTF-8, stocate BCrypt cost 12. Resetarea parolei prin email este implementată și necesită configurarea SMTP; vezi [security.md](docs/security.md).
 
 Access JWT: 15 minute, `iss`, `aud`, `sub` UUID, `sid`, `iat`, `nbf`, `exp`, `jti`, semnătură HS256. Se verifică și sesiunea auth din DB, deci logout, replay de refresh, schimbarea parolei și ștergerea contului invalidează accesul imediat.
 
@@ -209,40 +221,42 @@ Workerul procesează evenimentele scadente la 30 secunde, în loturi de 100, cu 
 
 Detalii și exemple în [swift-integration.md](docs/swift-integration.md). UUID-uri și enumuri lowercase compatibile cu modelul nativ. UTC ISO-8601, cu fracțiuni de secundă; decoderul trebuie să accepte timestampuri cu și fără fracțiuni.
 
-`GET /state` folosește o tranzacție PostgreSQL repeatable-read: profil, revision, toate aparatele și sesiunile lor active, ultimele 100 de sesiuni, ultimele 100 de evenimente și numărul necitit. Pentru mai mult istoric folosește endpointurile paginate. Exportul include întregul istoric. Statisticile includ numai sesiunile confirmate și folosesc calendarul din timezone-ul contului, inclusiv tranziții DST; `to` este exclusiv.
+`GET /state` folosește o tranzacție MySQL repeatable-read: profil, revision, toate aparatele și sesiunile lor active, ultimele 100 de sesiuni, ultimele 100 de evenimente și numărul necitit. Pentru mai mult istoric folosește endpointurile paginate. Exportul include întregul istoric. Statisticile includ numai sesiunile confirmate și folosesc calendarul din timezone-ul contului, inclusiv tranziții DST; `to` este exclusiv.
 
 Clientul va păstra tokenurile în Keychain, va trata `serverTime` ca reper și va calcula timerul din `startedAt`/`expectedEnd`, nu din polling la secundă. În prima integrare, comenzile noi cer conexiune; afișarea unui timer deja pornit funcționează din snapshot și offline.
 
 ## Verificare
 
+Portare MySQL, 9 octombrie 2026: **86 de teste trecute** pe MySQL 8.4.11, Maven verify, Flyway + Hibernate validate, recuperare prin server SMTP local real, competiție între resetări și rate limiting concurent. JAR-ul a trecut testul cu două porniri și păstrarea celor cinci sesiuni. Imaginea Docker prod a pornit pe filesystem read-only cu `done_runtime`; înregistrarea, pornirea unei sesiuni, citirea stării și ștergerea contului au trecut prin HTTP. Conexiunea la baza personală necesită datele ei reale de acces.
+
 ```bash
 ./scripts/test.sh
 ```
 
-Implicit testele pornesc PostgreSQL 16 prin Testcontainers; Docker trebuie să fie disponibil. Pentru un PostgreSQL de test existent:
+Implicit testele pornesc MySQL 8.4 prin Testcontainers; Docker trebuie să fie disponibil. Pentru un MySQL de test existent:
 
 ```bash
-TEST_DATABASE_URL=jdbc:postgresql://localhost:5432/done_test \
+TEST_DATABASE_URL=jdbc:mysql://localhost:3307/done_test \
 TEST_DATABASE_USER=done_test TEST_DATABASE_PASSWORD=parola \
 ./scripts/test.sh
 ```
 
 Baza de test este golită între cazuri. Folosește numai o bază dedicată testelor.
 
-Suită: HTTP real pe port aleatoriu, Flyway, JPA și PostgreSQL; toate tipurile de aparat, lifecycle, cronometru, istoric, proprietar, ștergere, optimistic locking, retry-uri și porniri concurente, JWT/refresh/replay, rate limits, asociere/revocare Apple, calendar local, corp chunked și concordanța OpenAPI/rute/DTO-uri. Testele Apple criptografice verifică JWT-uri RSA și client secret ES256 folosind un server JWKS/token/revoke local; nu autentifică un cont Apple real.
+Suită: HTTP real pe port aleatoriu, Flyway, JPA și MySQL; toate tipurile de aparat, lifecycle, cronometru, istoric, proprietar, ștergere, optimistic locking, retry-uri și porniri concurente, JWT/refresh/replay, rate limits, asociere/revocare Apple, calendar local, corp chunked și concordanța OpenAPI/rute/DTO-uri. Testele Apple criptografice verifică JWT-uri RSA și client secret ES256 folosind un server JWKS/token/revoke local; nu autentifică un cont Apple real.
 
 Smoke cu JAR-ul executabil, două porniri și persistență:
 
 ```bash
 ./mvnw package
-DATABASE_URL=jdbc:postgresql://localhost:5432/done_test \
+DATABASE_URL=jdbc:mysql://localhost:3307/done_test \
 DATABASE_USER=done_test DATABASE_PASSWORD=parola \
 python3 scripts/restart-smoke.py
 ```
 
-Verificarea din 8 octombrie 2026: Java 21, PostgreSQL 16 prin Testcontainers, **63 de teste trecute**, build Maven verify și imagine Docker construite. Containerul rulează cu profil prod, UID fără privilegii și filesystem read-only; health, paginile, loginul și persistența după restart sunt verificate pe date sintetice. Cele 9 cataloguri publice × 77 texte au validare de chei/placeholders și sintaxă JavaScript. Contractul OpenAPI are 63 operații și 43 scheme DTO, comparate cu controllerele/records. Apple real necesită credențiale și test pe domeniul final; verificările criptografice native/web folosesc un server local simulat.
+Verificare istorică din 8 octombrie 2026 (înainte de portarea MySQL): Java 21, PostgreSQL 16 prin Testcontainers, **63 de teste trecute**, build Maven verify și imagine Docker construite. Containerul rulează cu profil prod, UID fără privilegii și filesystem read-only; health, paginile, loginul și persistența după restart sunt verificate pe date sintetice. Cele 9 cataloguri publice × 77 texte au validare de chei/placeholders și sintaxă JavaScript. Contractul OpenAPI are 63 operații și 43 scheme DTO, comparate cu controllerele/records. Apple real necesită credențiale și test pe domeniul final; verificările criptografice native/web folosesc un server local simulat.
 
-Pentru publicare: HTTPS, secrete gestionate separat, backup PostgreSQL și configurație de proxy de încredere. `.env` și cheia P8 sunt ignorate de Git/Docker context. Parametrii JWKS/token/revoke Apple rămân endpointurile oficiale în configurația aplicației; în teste sunt înlocuite numai de serverul local.
+Pentru publicare: HTTPS, secrete gestionate separat, backup MySQL și configurație de proxy de încredere. `.env` și cheia P8 sunt ignorate de Git/Docker context. Parametrii JWKS/token/revoke Apple rămân endpointurile oficiale în configurația aplicației; în teste sunt înlocuite numai de serverul local.
 
 ## Case / households
 
@@ -286,4 +300,4 @@ Notă de deploy: `TIMESTAMP` în V1 a fost păstrat la cererea proprietarului, d
 
 ## Security hardening and password recovery
 
-See [security.md](docs/security.md) for the explicit route authorization matrix, rate/concurrency limits, SQL injection review, restricted production SQL role, recovery DTOs, SMTP setup, tests and the limits of application-level DDoS protection. The reset flow includes localized `/forgot-password` and `/reset-password` pages. iOS remains local-only. Production now needs separate runtime/migration database passwords and a verified SMTP sender with authenticated TLS; use the updated `.env.production.example` and `scripts/production.sh`. Existing V1–V9 migrations are unchanged; V10 adds recovery storage.
+See [security.md](docs/security.md) for the explicit route authorization matrix, rate/concurrency limits, SQL injection review, restricted production SQL role, recovery DTOs, SMTP setup, tests and the limits of application-level DDoS protection. The reset flow includes localized `/forgot-password` and `/reset-password` pages. iOS remains local-only. Production now needs separate runtime/migration database passwords and a verified SMTP sender with authenticated TLS; use the updated `.env.production.example` and `scripts/production.sh`. The PostgreSQL migration archive remains unchanged; the MySQL baseline includes recovery storage.

@@ -6,16 +6,16 @@ case "${1:-migrate}" in
     cat <<'HELP'
 Usage: ./scripts/migrate.sh [migrate|info|validate]
 
-Apply all pending PostgreSQL migrations, in Flyway version order, without
+Apply all pending MySQL migrations, in Flyway version order, without
 starting the API. Re-running skips migrations already recorded by Flyway.
 
 Configuration: DATABASE_URL (JDBC), DATABASE_USER, DATABASE_PASSWORD.
 Values exported by the caller take precedence over the project's .env.
-Defaults: jdbc:postgresql://localhost:5432/done, user done, schema public.
+Defaults: jdbc:mysql://localhost:3306/done_db, user done_admin, database selected by JDBC URL.
 Requires Java 21; Maven is provided by ./mvnw.
 
 Create the database first with scripts/create-database.sql, or use Compose's
-db service, which already creates the done database and role.
+db service, which already creates the done_db database and account.
 HELP
     exit 0 ;;
   migrate|info|validate) done_migration_action="${1:-migrate}" ;;
@@ -41,12 +41,12 @@ if [[ -f .env ]]; then
     DATABASE_PASSWORD="$(source .env; printf '%s' "${DATABASE_PASSWORD:-}")"
   fi
 fi
-export DATABASE_URL="${DATABASE_URL:-jdbc:postgresql://localhost:5432/done}"
-export DATABASE_USER="${DATABASE_USER:-done}"
+export DATABASE_URL="${DATABASE_URL:-jdbc:mysql://localhost:3306/done_db}"
+export DATABASE_USER="${DATABASE_USER:-done_admin}"
 export DATABASE_PASSWORD="${DATABASE_PASSWORD:-}"
 
-if [[ $DATABASE_URL != jdbc:postgresql://* ]]; then
-  echo 'DATABASE_URL must be a PostgreSQL JDBC URL, e.g. jdbc:postgresql://localhost:5432/done.' >&2
+if [[ $DATABASE_URL != jdbc:mysql://* ]]; then
+  echo 'DATABASE_URL must be a MySQL JDBC URL, e.g. jdbc:mysql://localhost:3306/done_db.' >&2
   exit 2
 fi
 if [[ -z $DATABASE_PASSWORD ]]; then
