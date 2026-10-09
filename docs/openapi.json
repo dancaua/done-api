@@ -1,0 +1,4323 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "DONE. API",
+    "version" : "1.0.0",
+    "description" : "Native Apple API. Email/password JWT and native Sign in with Apple. All timestamps UTC; history is server-owned. Durable activity events; APNs transport is not part of this phase."
+  },
+  "servers" : [ {
+    "description" : "Local development; configure PUBLIC_ORIGIN for deployed links.",
+    "url" : "http://127.0.0.1:8080"
+  } ],
+  "components" : {
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "bearerFormat" : "JWT",
+        "scheme" : "bearer",
+        "type" : "http"
+      },
+      "writerCapability" : {
+        "description" : "43-character base64url private writer key; never a JWT and never included in the public link.",
+        "type" : "http",
+        "bearerFormat" : "Private write capability",
+        "scheme" : "bearer"
+      }
+    },
+    "schemas" : {
+      "ActivityView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "applianceId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "sessionId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "kind" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "title" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "detail" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "occurredAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "readAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "titleKey" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "message" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/LocalizedMessage"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "programSnapshot" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ProgramSnapshot"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "id", "applianceId", "sessionId", "kind", "title", "detail", "occurredAt", "readAt", "titleKey", "message", "programSnapshot" ]
+      },
+      "AppleChallenge" : {
+        "type" : "object",
+        "properties" : {
+          "challengeId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "nonce" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "expiresAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "challengeId", "nonce", "expiresAt" ]
+      },
+      "AppleLogin" : {
+        "type" : "object",
+        "properties" : {
+          "challengeId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "identityToken" : {
+            "type" : "string",
+            "maxLength" : 16000
+          },
+          "authorizationCode" : {
+            "type" : "string",
+            "maxLength" : 4096
+          },
+          "displayName" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "language" : {
+            "anyOf" : [ {
+              "type" : "string",
+              "pattern" : "en|ro|es|it|fr|de|pl|hi|ja"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "clientId" : {
+            "anyOf" : [ {
+              "type" : "string",
+              "maxLength" : 255
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "challengeId", "identityToken", "authorizationCode" ]
+      },
+      "ApplianceNotificationSettings" : {
+        "type" : "object",
+        "properties" : {
+          "notificationsEnabled" : {
+            "type" : "boolean"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer",
+            "minimum" : 0
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "notificationsEnabled", "version" ]
+      },
+      "ApplianceView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "householdId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "name" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "kind" : {
+            "anyOf" : [ {
+              "enum" : [ "washer", "dryer", "dishwasher", "oven", "hob", "custom" ],
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "status" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "notificationsEnabled" : {
+            "anyOf" : [ {
+              "type" : "boolean"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "programs" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/ProgramView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "activeSession" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/SessionView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "createdAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "id", "householdId", "name", "kind", "status", "notificationsEnabled", "programs", "activeSession", "createdAt", "version" ]
+      },
+      "CatalogItem" : {
+        "type" : "object",
+        "properties" : {
+          "kind" : {
+            "anyOf" : [ {
+              "enum" : [ "washer", "dryer", "dishwasher", "oven", "hob", "custom" ],
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "title" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "defaultName" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "supportsStopwatch" : {
+            "type" : "boolean"
+          },
+          "needsCollection" : {
+            "type" : "boolean"
+          },
+          "programs" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/Suggestion"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "titleKey" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "kind", "title", "defaultName", "supportsStopwatch", "needsCollection", "programs", "titleKey" ]
+      },
+      "ChangePassword" : {
+        "type" : "object",
+        "properties" : {
+          "currentPassword" : {
+            "type" : "string",
+            "maxLength" : 64
+          },
+          "newPassword" : {
+            "type" : "string",
+            "minLength" : 12,
+            "maxLength" : 64
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "currentPassword", "newPassword" ]
+      },
+      "CreateAppliance" : {
+        "type" : "object",
+        "properties" : {
+          "kind" : {
+            "enum" : [ "washer", "dryer", "dishwasher", "oven", "hob", "custom" ],
+            "type" : "string"
+          },
+          "name" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "householdId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "notificationsEnabled" : {
+            "anyOf" : [ {
+              "type" : "boolean"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "kind" ]
+      },
+      "CreateHousehold" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "name" ]
+      },
+      "CreateProjection" : {
+        "type" : "object",
+        "properties" : {
+          "snapshot" : {
+            "$ref" : "#/components/schemas/SharedSnapshot"
+          },
+          "revision" : {
+            "format" : "int64",
+            "type" : "integer",
+            "minimum" : 0
+          },
+          "writeKey" : {
+            "type" : "string",
+            "pattern" : "[A-Za-z0-9_-]{43}"
+          },
+          "commandId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "snapshot", "revision", "writeKey", "commandId" ]
+      },
+      "Day" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "anyOf" : [ {
+              "format" : "date",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "sessions" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "date", "sessions" ]
+      },
+      "DeleteAccount" : {
+        "type" : "object",
+        "properties" : {
+          "password" : {
+            "anyOf" : [ {
+              "type" : "string",
+              "maxLength" : 64
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false
+      },
+      "Export" : {
+        "type" : "object",
+        "properties" : {
+          "schemaVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "exportedAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "user" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/UserView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "households" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/HouseholdView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "appliances" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/ApplianceView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "sessions" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/SessionView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "activity" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/ActivityView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "schemaVersion", "exportedAt", "user", "households", "appliances", "sessions", "activity" ]
+      },
+      "ExtendSession" : {
+        "type" : "object",
+        "properties" : {
+          "minutes" : {
+            "format" : "int32",
+            "type" : "integer",
+            "minimum" : 1,
+            "maximum" : 1440
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "minutes" ]
+      },
+      "FrontendStatistics" : {
+        "type" : "object",
+        "properties" : {
+          "period" : {
+            "anyOf" : [ {
+              "enum" : [ "week", "month", "year" ],
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "windowDays" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "from" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "to" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "timezone" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "completedSessions" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalDurationSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "averageDurationSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "mostUsedProgram" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ProgramSnapshot"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "changePercent" : {
+            "anyOf" : [ {
+              "format" : "double",
+              "type" : "number"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "usagePerDay" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/Day"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "recentSessions" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/SessionView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "period", "windowDays", "from", "to", "timezone", "completedSessions", "totalDurationSeconds", "averageDurationSeconds", "mostUsedProgram", "changePercent", "usagePerDay", "recentSessions" ]
+      },
+      "HouseholdView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "name" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "localizationKey" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "applianceCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "ownerId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "id", "name", "localizationKey", "applianceCount", "createdAt", "version", "ownerId" ]
+      },
+      "LiveActivityShareDTO" : {
+        "type" : "object",
+        "properties" : {
+          "shareUrl" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "snapshot" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/SharedSnapshot"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "status" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "publishedAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "serverTime" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "expiresAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "refreshAfterSeconds" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "shareUrl", "snapshot", "status", "publishedAt", "serverTime", "expiresAt", "refreshAfterSeconds" ]
+      },
+      "LocalizedMessage" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "arguments" : {
+            "anyOf" : [ {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "key", "arguments" ]
+      },
+      "Login" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "maxLength" : 254
+          },
+          "password" : {
+            "type" : "string",
+            "maxLength" : 64
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "email", "password" ]
+      },
+      "MeasuredProgram" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "name" ]
+      },
+      "MoveAppliance" : {
+        "type" : "object",
+        "properties" : {
+          "householdId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer",
+            "minimum" : 0
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "householdId", "version" ]
+      },
+      "MutationResult" : {
+        "type" : "object",
+        "properties" : {
+          "revision" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "revision" ]
+      },
+      "PageResponse_ActivityView" : {
+        "required" : [ "items", "page", "size", "totalElements", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ActivityView"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }
+      },
+      "PageResponse_SessionView" : {
+        "required" : [ "items", "page", "size", "totalElements", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SessionView"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }
+      },
+      "Problem" : {
+        "required" : [ "status", "code", "detail" ],
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer"
+          },
+          "detail" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ProgramInput" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "minutes" : {
+            "format" : "int32",
+            "type" : "integer",
+            "minimum" : 0,
+            "maximum" : 1440
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "minutes" ]
+      },
+      "ProgramSnapshot" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "minutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "localizationKey" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "isCustom" : {
+            "type" : "boolean"
+          }
+        },
+        "additionalProperties" : false,
+        "description" : "Immutable value snapshot. name is literal user content or a built-in label; localizationKey is optional. Measured values are separate from the original snapshot.",
+        "required" : [ "name", "minutes", "isCustom" ]
+      },
+      "ProgramView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "name" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "minutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "suggested" : {
+            "type" : "boolean"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "applianceId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "localizationKey" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "isCustom" : {
+            "type" : "boolean"
+          },
+          "sortOrder" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "id", "name", "minutes", "suggested", "version", "applianceId", "localizationKey", "isCustom", "sortOrder" ]
+      },
+      "Refresh" : {
+        "type" : "object",
+        "properties" : {
+          "refreshToken" : {
+            "type" : "string",
+            "pattern" : "[A-Za-z0-9_-]{43}"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "refreshToken" ]
+      },
+      "Register" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "maxLength" : 254
+          },
+          "password" : {
+            "type" : "string",
+            "minLength" : 12,
+            "maxLength" : 64
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "language" : {
+            "anyOf" : [ {
+              "type" : "string",
+              "pattern" : "en|ro|es|it|fr|de|pl|hi|ja"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "email", "password", "displayName" ]
+      },
+      "RenameAppliance" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer",
+            "minimum" : 0
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "name", "version" ]
+      },
+      "RenameHousehold" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer",
+            "minimum" : 0
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "name", "version" ]
+      },
+      "SessionView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "applianceId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "programId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "programName" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "minutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "mode" : {
+            "anyOf" : [ {
+              "enum" : [ "countdown", "stopwatch" ],
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "status" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "startedAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "expectedEnd" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "completedAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "collectedAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "canceledAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "elapsedSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "serverTime" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "sourceProgramId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "programSnapshot" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ProgramSnapshot"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "measuredProgram" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ProgramSnapshot"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "timingMode" : {
+            "anyOf" : [ {
+              "enum" : [ "countdown", "stopwatch" ],
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "isOpen" : {
+            "type" : "boolean"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "id", "applianceId", "programId", "programName", "minutes", "mode", "status", "startedAt", "expectedEnd", "completedAt", "collectedAt", "canceledAt", "elapsedSeconds", "version", "serverTime", "sourceProgramId", "programSnapshot", "measuredProgram", "timingMode", "isOpen" ]
+      },
+      "SharedSnapshot" : {
+        "type" : "object",
+        "properties" : {
+          "schemaVersion" : {
+            "format" : "int32",
+            "type" : "integer",
+            "minimum" : 1,
+            "maximum" : 1
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "applianceName" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "washer", "dryer", "dishwasher", "oven", "hob", "custom" ],
+            "type" : "string"
+          },
+          "program" : {
+            "$ref" : "#/components/schemas/ProgramSnapshot"
+          },
+          "timingMode" : {
+            "enum" : [ "countdown", "stopwatch" ],
+            "type" : "string"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "expectedEnd" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "completedAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "collectedAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "canceledAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "capturedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "language" : {
+            "type" : "string",
+            "pattern" : "en|ro|es|it|fr|de|pl|hi|ja"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "schemaVersion", "id", "applianceName", "kind", "program", "timingMode", "startedAt", "capturedAt", "language" ]
+      },
+      "Snapshot" : {
+        "type" : "object",
+        "properties" : {
+          "revision" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "serverTime" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "user" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/UserView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "households" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/HouseholdView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "appliances" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/ApplianceView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "recentSessions" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/SessionView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "hasMoreSessions" : {
+            "type" : "boolean"
+          },
+          "recentActivity" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/ActivityView"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "unreadActivityCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "revision", "serverTime", "user", "households", "appliances", "recentSessions", "hasMoreSessions", "recentActivity", "unreadActivityCount" ]
+      },
+      "StartSession" : {
+        "type" : "object",
+        "properties" : {
+          "programId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "program" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ProgramInput"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "mode" : {
+            "anyOf" : [ {
+              "enum" : [ "countdown", "stopwatch" ],
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "saveProgram" : {
+            "anyOf" : [ {
+              "type" : "boolean"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "minutes" : {
+            "anyOf" : [ {
+              "format" : "int32",
+              "type" : "integer",
+              "minimum" : 1,
+              "maximum" : 1440
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "description" : "mode also accepts the JSON alias timingMode. Preset programId may be paired with a minutes override. All appliance kinds support stopwatch; stopwatch forbids preset ID and minutes override."
+      },
+      "Statistics" : {
+        "type" : "object",
+        "properties" : {
+          "period" : {
+            "anyOf" : [ {
+              "enum" : [ "week", "month", "year" ],
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "from" : {
+            "anyOf" : [ {
+              "format" : "date",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "to" : {
+            "anyOf" : [ {
+              "format" : "date",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "timezone" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "completedSessions" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalDurationSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "averageDurationSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "mostUsedProgram" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "changePercent" : {
+            "anyOf" : [ {
+              "format" : "double",
+              "type" : "number"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "usagePerDay" : {
+            "anyOf" : [ {
+              "items" : {
+                "$ref" : "#/components/schemas/Day"
+              },
+              "type" : "array"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "period", "from", "to", "timezone", "completedSessions", "totalDurationSeconds", "averageDurationSeconds", "mostUsedProgram", "changePercent", "usagePerDay" ]
+      },
+      "Suggestion" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "minutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "localizationKey" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "name", "minutes", "localizationKey" ]
+      },
+      "Tokens" : {
+        "type" : "object",
+        "properties" : {
+          "tokenType" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "accessToken" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "expiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshToken" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "refreshExpiresAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "user" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/UserView"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "tokenType", "accessToken", "expiresIn", "refreshToken", "refreshExpiresAt", "user" ]
+      },
+      "UpdateProfile" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "timezone" : {
+            "anyOf" : [ {
+              "type" : "string",
+              "maxLength" : 64
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "notificationsEnabled" : {
+            "anyOf" : [ {
+              "type" : "boolean"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "language" : {
+            "anyOf" : [ {
+              "type" : "string",
+              "pattern" : "en|ro|es|it|fr|de|pl|hi|ja"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "onboarded" : {
+            "anyOf" : [ {
+              "type" : "boolean"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false
+      },
+      "UpdateProgram" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "minutes" : {
+            "format" : "int32",
+            "type" : "integer",
+            "minimum" : 1,
+            "maximum" : 1440
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer",
+            "minimum" : 0
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "name", "minutes", "version" ]
+      },
+      "UpdateProjection" : {
+        "type" : "object",
+        "properties" : {
+          "snapshot" : {
+            "$ref" : "#/components/schemas/SharedSnapshot"
+          },
+          "revision" : {
+            "format" : "int64",
+            "type" : "integer",
+            "minimum" : 0
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "snapshot", "revision" ]
+      },
+      "UserView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "email" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "displayName" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "timezone" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "language" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "notificationsEnabled" : {
+            "type" : "boolean"
+          },
+          "passwordEnabled" : {
+            "type" : "boolean"
+          },
+          "appleEnabled" : {
+            "type" : "boolean"
+          },
+          "revision" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "onboarded" : {
+            "type" : "boolean"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "id", "email", "displayName", "timezone", "language", "notificationsEnabled", "passwordEnabled", "appleEnabled", "revision", "onboarded" ]
+      }
+    }
+  },
+  "paths" : {
+    "/" : {
+      "get" : {
+        "operationId" : "PublicSiteController_page_47",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account-deletion" : {
+      "get" : {
+        "operationId" : "PublicSiteController_page_998490525",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares" : {
+      "post" : {
+        "operationId" : "SharingController_create_3750114168",
+        "tags" : [ "Sharing" ],
+        "security" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateProjection"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "201" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LiveActivityShareDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares/by-command/{id}" : {
+      "delete" : {
+        "operationId" : "SharingController_revokeCommand_2868635082",
+        "tags" : [ "Sharing" ],
+        "security" : [ {
+          "writerCapability" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "204" : {
+            "description" : "Success"
+          }
+        }
+      }
+    },
+    "/api/shares/{token}" : {
+      "delete" : {
+        "operationId" : "SharingController_revoke_1693283912",
+        "tags" : [ "Sharing" ],
+        "security" : [ {
+          "writerCapability" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "token",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "204" : {
+            "description" : "Success"
+          }
+        }
+      },
+      "get" : {
+        "operationId" : "SharingController_get_1693283912",
+        "tags" : [ "Sharing" ],
+        "security" : [ ],
+        "parameters" : [ {
+          "name" : "token",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LiveActivityShareDTO"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "operationId" : "SharingController_update_1693283912",
+        "tags" : [ "Sharing" ],
+        "security" : [ {
+          "writerCapability" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProjection"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "token",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LiveActivityShareDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/activity" : {
+      "get" : {
+        "operationId" : "ActivityController_list_3181616031",
+        "tags" : [ "Activity" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "page",
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer",
+            "default" : 0
+          },
+          "required" : false,
+          "in" : "query"
+        }, {
+          "name" : "size",
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer",
+            "default" : 20
+          },
+          "required" : false,
+          "in" : "query"
+        }, {
+          "name" : "householdId",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : false,
+          "in" : "query"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponse_ActivityView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/activity/read-all" : {
+      "post" : {
+        "operationId" : "ActivityController_readAll_530642266",
+        "tags" : [ "Activity" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        }, {
+          "name" : "householdId",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : false,
+          "in" : "query"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MutationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/activity/{id}/read" : {
+      "post" : {
+        "operationId" : "ActivityController_read_1944713166",
+        "tags" : [ "Activity" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivityView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appliances" : {
+      "get" : {
+        "operationId" : "ApplianceController_list_1395660022",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "householdId",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : false,
+          "in" : "query"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ApplianceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "operationId" : "ApplianceController_create_1395660022",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateAppliance"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "201" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApplianceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appliances/{id}" : {
+      "delete" : {
+        "operationId" : "ApplianceController_delete_4065617376",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MutationResult"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get" : {
+        "operationId" : "ApplianceController_get_4065617376",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApplianceView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "operationId" : "ApplianceController_rename_4065617376",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RenameAppliance"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApplianceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appliances/{id}/household" : {
+      "patch" : {
+        "operationId" : "ApplianceController_move_3004726896",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MoveAppliance"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApplianceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appliances/{id}/notifications" : {
+      "patch" : {
+        "operationId" : "ApplianceController_notifications_1137391353",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ApplianceNotificationSettings"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApplianceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appliances/{id}/programs" : {
+      "post" : {
+        "operationId" : "ApplianceController_program_586500542",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProgramInput"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "201" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProgramView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appliances/{id}/programs/{programId}" : {
+      "delete" : {
+        "operationId" : "ApplianceController_deleteProgram_3003063688",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "programId",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MutationResult"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "operationId" : "ApplianceController_updateProgram_3003063688",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProgram"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "programId",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProgramView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appliances/{id}/sessions" : {
+      "get" : {
+        "operationId" : "SessionController_history_2992662508",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "page",
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer",
+            "default" : 0
+          },
+          "required" : false,
+          "in" : "query"
+        }, {
+          "name" : "size",
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer",
+            "default" : 20
+          },
+          "required" : false,
+          "in" : "query"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponse_SessionView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "operationId" : "SessionController_start_2992662508",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StartSession"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "201" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/apple" : {
+      "post" : {
+        "operationId" : "AuthController_apple_2709130435",
+        "tags" : [ "Auth" ],
+        "security" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AppleLogin"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Tokens"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/apple/challenge" : {
+      "post" : {
+        "operationId" : "AuthController_challenge_3768940055",
+        "tags" : [ "Auth" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AppleChallenge"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/apple/delete-login" : {
+      "post" : {
+        "operationId" : "AuthController_deleteLogin_3785397907",
+        "tags" : [ "Auth" ],
+        "security" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AppleLogin"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Tokens"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login" : {
+      "post" : {
+        "operationId" : "AuthController_login_2719250642",
+        "tags" : [ "Auth" ],
+        "security" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Login"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Tokens"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "operationId" : "AuthController_logout_2692397377",
+        "tags" : [ "Auth" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "204" : {
+            "description" : "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout-all" : {
+      "post" : {
+        "operationId" : "AuthController_logoutAll_102768405",
+        "tags" : [ "Auth" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "204" : {
+            "description" : "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh" : {
+      "post" : {
+        "operationId" : "AuthController_refresh_2602853892",
+        "tags" : [ "Auth" ],
+        "security" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Refresh"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Tokens"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register" : {
+      "post" : {
+        "operationId" : "AuthController_register_3399794842",
+        "tags" : [ "Auth" ],
+        "security" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Register"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "201" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Tokens"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog" : {
+      "get" : {
+        "operationId" : "ApplianceController_catalog_434660745",
+        "tags" : [ "Appliance" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CatalogItem"
+                  },
+                  "type" : "array"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households" : {
+      "get" : {
+        "operationId" : "HouseholdController_list_3761181956",
+        "tags" : [ "Household" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/HouseholdView"
+                  },
+                  "type" : "array"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "operationId" : "HouseholdController_create_3761181956",
+        "tags" : [ "Household" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateHousehold"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "201" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HouseholdView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{id}" : {
+      "delete" : {
+        "operationId" : "HouseholdController_delete_3298377362",
+        "tags" : [ "Household" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MutationResult"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get" : {
+        "operationId" : "HouseholdController_get_3298377362",
+        "tags" : [ "Household" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HouseholdView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "operationId" : "HouseholdController_rename_3298377362",
+        "tags" : [ "Household" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RenameHousehold"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HouseholdView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/localizations/{language}" : {
+      "get" : {
+        "operationId" : "LocalizationController_get_93814479",
+        "tags" : [ "Localization" ],
+        "security" : [ ],
+        "parameters" : [ {
+          "name" : "language",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : true,
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me" : {
+      "delete" : {
+        "operationId" : "AccountController_delete_2200265256",
+        "tags" : [ "Account" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeleteAccount"
+              }
+            }
+          },
+          "required" : false
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "204" : {
+            "description" : "Success"
+          }
+        }
+      },
+      "get" : {
+        "operationId" : "AccountController_get_2200265256",
+        "tags" : [ "Account" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "operationId" : "AccountController_update_2200265256",
+        "tags" : [ "Account" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProfile"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/export" : {
+      "get" : {
+        "operationId" : "StateController_export_1896174971",
+        "tags" : [ "State" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Export"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/identities/apple" : {
+      "post" : {
+        "operationId" : "AccountController_apple_1174696558",
+        "tags" : [ "Account" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AppleLogin"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/password" : {
+      "post" : {
+        "operationId" : "AccountController_password_6071970",
+        "tags" : [ "Account" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "204" : {
+            "description" : "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/public-config" : {
+      "get" : {
+        "operationId" : "PublicSiteController_configuration_97817750",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : true,
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/session-shares" : {
+      "get" : {
+        "operationId" : "SharingController_list_948018203",
+        "tags" : [ "Sharing" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/LiveActivityShareDTO"
+                  },
+                  "type" : "array"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/session-shares/{token}" : {
+      "delete" : {
+        "operationId" : "SharingController_stop_3348335595",
+        "tags" : [ "Sharing" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "token",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MutationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}" : {
+      "get" : {
+        "operationId" : "SessionController_get_1279659017",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/cancel" : {
+      "post" : {
+        "operationId" : "SessionController_cancel_314447680",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/collect" : {
+      "post" : {
+        "operationId" : "SessionController_collect_1557172516",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/complete" : {
+      "post" : {
+        "operationId" : "SessionController_complete_1060241535",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/extend" : {
+      "post" : {
+        "operationId" : "SessionController_extend_393127904",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExtendSession"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/measured-program" : {
+      "post" : {
+        "operationId" : "SessionController_measured_500632515",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MeasuredProgram"
+              }
+            }
+          },
+          "required" : true
+        },
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/repeat" : {
+      "post" : {
+        "operationId" : "SessionController_repeat_747640417",
+        "tags" : [ "Session" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "201" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{id}/share" : {
+      "post" : {
+        "operationId" : "SharingController_owned_2103326297",
+        "tags" : [ "Sharing" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "id",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        }, {
+          "name" : "Idempotency-Key",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "201" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LiveActivityShareDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/state" : {
+      "get" : {
+        "operationId" : "StateController_snapshot_2612422145",
+        "tags" : [ "State" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Snapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics" : {
+      "get" : {
+        "operationId" : "StatisticsController_get_1668052403",
+        "tags" : [ "Statistics" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "period",
+          "schema" : {
+            "enum" : [ "week", "month", "year" ],
+            "type" : "string",
+            "default" : "week"
+          },
+          "required" : false,
+          "in" : "query"
+        }, {
+          "name" : "date",
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "required" : false,
+          "in" : "query"
+        }, {
+          "name" : "householdId",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : false,
+          "in" : "query"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Statistics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/rolling" : {
+      "get" : {
+        "operationId" : "StatisticsController_rolling_2389522921",
+        "tags" : [ "Statistics" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "period",
+          "schema" : {
+            "enum" : [ "week", "month", "year" ],
+            "type" : "string",
+            "default" : "week"
+          },
+          "required" : false,
+          "in" : "query"
+        }, {
+          "name" : "householdId",
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : false,
+          "in" : "query"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FrontendStatistics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contact" : {
+      "get" : {
+        "operationId" : "PublicSiteController_page_1259233553",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delete-account" : {
+      "get" : {
+        "operationId" : "PublicSiteController_page_4252539386",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/privacy" : {
+      "get" : {
+        "operationId" : "PublicSiteController_page_4288176249",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/privacy-policy" : {
+      "get" : {
+        "operationId" : "PublicSiteController_page_1636820230",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share/{token}" : {
+      "get" : {
+        "operationId" : "PublicSiteController_share_3092332512",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "parameters" : [ {
+          "name" : "token",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path"
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/support" : {
+      "get" : {
+        "operationId" : "PublicSiteController_page_2747907264",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

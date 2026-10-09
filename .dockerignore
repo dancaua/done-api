@@ -1,0 +1,8 @@
+target
+.git
+.idea
+.env
+.env.*
+secrets
+*.p8
+*.log

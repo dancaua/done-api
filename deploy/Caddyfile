@@ -1,0 +1,5 @@
+{$PUBLIC_DOMAIN} {
+    encode zstd gzip
+    # No access log: capability URLs and account data must not enter request logs.
+    reverse_proxy api:8080
+}

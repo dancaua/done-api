@@ -1,0 +1,83 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: done
+      POSTGRES_USER: done
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
+    volumes:
+      - done-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U done -d done"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    restart: unless-stopped
+    stop_grace_period: 30s
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      PORT: 8080
+      DATABASE_URL: jdbc:postgresql://db:5432/done
+      DATABASE_USER: done
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
+      JWT_SECRET: ${JWT_SECRET:?Set production signing key}
+      JWT_ISSUER: ${JWT_ISSUER:-done-api}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set public HTTPS origin}
+      PUBLIC_SITE_MOCK: ${PUBLIC_SITE_MOCK:-false}
+      OPERATOR_NAME: ${OPERATOR_NAME:?Set operator name}
+      OPERATOR_ADDRESS: ${OPERATOR_ADDRESS:?Set operator address}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:?Set support contact}
+      PRIVACY_EMAIL: ${PRIVACY_EMAIL:?Set privacy contact}
+      HOSTING_REGION: ${HOSTING_REGION:?Set hosting region}
+      DATA_PROCESSORS: ${DATA_PROCESSORS:?Set actual processors}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      ALLOW_ANONYMOUS_SHARING: ${ALLOW_ANONYMOUS_SHARING:-false}
+      APPLE_ENABLED: ${APPLE_ENABLED:-false}
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-ro.done.app}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY_PATH: /run/secrets/AuthKey.p8
+      APPLE_ENCRYPTION_KEY: ${APPLE_ENCRYPTION_KEY:-}
+      APPLE_WEB_CLIENT_ID: ${APPLE_WEB_CLIENT_ID:-}
+      APPLE_WEB_REDIRECT_URI: ${APPLE_WEB_REDIRECT_URI:-}
+      # Trust only this stack's Caddy, never an arbitrary Forwarded header.
+      FORWARD_HEADERS_STRATEGY: native
+      TRUSTED_PROXY_REGEX: '172\.30\.80\.2'
+    volumes:
+      - ./secrets:/run/secrets:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [backend]
+    restart: unless-stopped
+    stop_grace_period: 30s
+  web:
+    image: caddy:2-alpine
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Set real public domain}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [api]
+    networks:
+      backend:
+        ipv4_address: 172.30.80.2
+    restart: unless-stopped
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: 172.30.80.0/24
+volumes:
+  done-postgres:
+  caddy-data:
+  caddy-config:

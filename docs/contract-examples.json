@@ -1,0 +1,674 @@
+{
+  "description": "Synthetic review data, captured through real HTTP. No auth/private writer tokens.",
+  "examples": {
+    "UserView": {
+      "id": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+      "email": "contract-review@done.example",
+      "displayName": "Alex",
+      "timezone": "Europe/Bucharest",
+      "language": "ro",
+      "notificationsEnabled": true,
+      "passwordEnabled": true,
+      "appleEnabled": false,
+      "revision": 1,
+      "onboarded": true
+    },
+    "UpdateProfile": {
+      "language": "ro",
+      "onboarded": true
+    },
+    "HouseholdView": {
+      "id": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+      "name": "My home",
+      "localizationKey": "household.default",
+      "applianceCount": 0,
+      "createdAt": "2026-10-08T20:40:27.236929Z",
+      "version": 0,
+      "ownerId": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad"
+    },
+    "CreateAppliance": {
+      "householdId": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+      "kind": "washer",
+      "name": "Mașina de spălat",
+      "notificationsEnabled": true
+    },
+    "ApplianceView": {
+      "id": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+      "householdId": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+      "name": "Mașina de spălat",
+      "kind": "washer",
+      "status": "idle",
+      "notificationsEnabled": true,
+      "programs": [
+        {
+          "id": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "name": "Bumbac 40°C",
+          "minutes": 96,
+          "suggested": true,
+          "version": 0,
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "localizationKey": "Bumbac 40°C",
+          "isCustom": false,
+          "sortOrder": 0
+        },
+        {
+          "id": "a4db338b-e97d-41c4-99b5-398b2600710c",
+          "name": "Rapid 30°C",
+          "minutes": 30,
+          "suggested": true,
+          "version": 0,
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "localizationKey": "Rapid 30°C",
+          "isCustom": false,
+          "sortOrder": 1
+        },
+        {
+          "id": "2dd24666-87db-40d9-ad16-5a870a95adfc",
+          "name": "Eco 40–60°C",
+          "minutes": 210,
+          "suggested": true,
+          "version": 0,
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "localizationKey": "Eco 40–60°C",
+          "isCustom": false,
+          "sortOrder": 2
+        }
+      ],
+      "activeSession": null,
+      "createdAt": "2026-10-08T20:40:27.489278Z",
+      "version": 0
+    },
+    "ProgramView": {
+      "id": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+      "name": "Bumbac 40°C",
+      "minutes": 96,
+      "suggested": true,
+      "version": 0,
+      "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+      "localizationKey": "Bumbac 40°C",
+      "isCustom": false,
+      "sortOrder": 0
+    },
+    "StartSession": {
+      "programId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+      "minutes": 35,
+      "saveProgram": false
+    },
+    "SessionView": {
+      "id": "ad2bc42c-287d-4d2e-b465-088a97037351",
+      "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+      "programId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+      "programName": "Bumbac 40°C",
+      "minutes": 35,
+      "mode": "countdown",
+      "status": "running",
+      "startedAt": "2026-10-08T20:40:27.569337Z",
+      "expectedEnd": "2026-10-08T21:15:27.569337Z",
+      "completedAt": null,
+      "collectedAt": null,
+      "canceledAt": null,
+      "elapsedSeconds": 0,
+      "version": 0,
+      "serverTime": "2026-10-08T20:40:27.587199Z",
+      "sourceProgramId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+      "programSnapshot": {
+        "name": "Bumbac 40°C",
+        "minutes": 35,
+        "localizationKey": "Bumbac 40°C",
+        "isCustom": false
+      },
+      "measuredProgram": null,
+      "timingMode": "countdown",
+      "isOpen": true
+    },
+    "ProgramSnapshot": {
+      "name": "Bumbac 40°C",
+      "minutes": 35,
+      "localizationKey": "Bumbac 40°C",
+      "isCustom": false
+    },
+    "LiveActivityShareDTO": {
+      "shareUrl": "http://127.0.0.1:8089/share/Foo9njQr3fBrTsY7Hc4U3Dw6cgimc7dLY44_eysdmEE",
+      "snapshot": {
+        "schemaVersion": 1,
+        "id": "e92d399b-ede9-498f-807b-71239a2076fb",
+        "applianceName": "Mașina de spălat",
+        "kind": "washer",
+        "program": {
+          "name": "Bumbac 40°C",
+          "minutes": 35,
+          "localizationKey": "Bumbac 40°C",
+          "isCustom": false
+        },
+        "timingMode": "countdown",
+        "startedAt": "2026-10-08T20:40:27.569337Z",
+        "expectedEnd": "2026-10-08T21:15:27.569337Z",
+        "completedAt": null,
+        "collectedAt": null,
+        "canceledAt": null,
+        "capturedAt": "2026-10-08T20:40:27.638138Z",
+        "language": "ro"
+      },
+      "status": "running",
+      "publishedAt": "2026-10-08T20:40:27.638144Z",
+      "serverTime": "2026-10-08T20:40:27.638243Z",
+      "expiresAt": "2026-10-15T20:40:27.618443Z",
+      "refreshAfterSeconds": 300
+    },
+    "SharedSnapshot": {
+      "schemaVersion": 1,
+      "id": "e92d399b-ede9-498f-807b-71239a2076fb",
+      "applianceName": "Mașina de spălat",
+      "kind": "washer",
+      "program": {
+        "name": "Bumbac 40°C",
+        "minutes": 35,
+        "localizationKey": "Bumbac 40°C",
+        "isCustom": false
+      },
+      "timingMode": "countdown",
+      "startedAt": "2026-10-08T20:40:27.569337Z",
+      "expectedEnd": "2026-10-08T21:15:27.569337Z",
+      "completedAt": null,
+      "collectedAt": null,
+      "canceledAt": null,
+      "capturedAt": "2026-10-08T20:40:27.638138Z",
+      "language": "ro"
+    },
+    "ActivityView": {
+      "id": "3a0b1a3d-e24e-40d0-959b-ac2552abd369",
+      "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+      "sessionId": "ad2bc42c-287d-4d2e-b465-088a97037351",
+      "kind": "finished",
+      "title": "Rufele sunt gata!",
+      "detail": "Mașina de spălat · Finalizare confirmată de tine.",
+      "occurredAt": "2026-10-08T20:40:27.690910Z",
+      "readAt": null,
+      "titleKey": "Rufele sunt gata!",
+      "message": {
+        "key": "{0} · Finalizare confirmată de tine.",
+        "arguments": [
+          "Mașina de spălat"
+        ]
+      },
+      "programSnapshot": null
+    },
+    "LocalizedMessage": {
+      "key": "{0} · Finalizare confirmată de tine.",
+      "arguments": [
+        "Mașina de spălat"
+      ]
+    },
+    "PageResponse_SessionView": {
+      "items": [
+        {
+          "id": "ad2bc42c-287d-4d2e-b465-088a97037351",
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "programId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "programName": "Bumbac 40°C",
+          "minutes": 35,
+          "mode": "countdown",
+          "status": "collected",
+          "startedAt": "2026-10-08T20:40:27.569337Z",
+          "expectedEnd": "2026-10-08T21:15:27.569337Z",
+          "completedAt": "2026-10-08T20:40:27.690910Z",
+          "collectedAt": "2026-10-08T20:40:27.729972Z",
+          "canceledAt": null,
+          "elapsedSeconds": 0,
+          "version": 2,
+          "serverTime": "2026-10-08T20:40:27.794689Z",
+          "sourceProgramId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "programSnapshot": {
+            "name": "Bumbac 40°C",
+            "minutes": 35,
+            "localizationKey": "Bumbac 40°C",
+            "isCustom": false
+          },
+          "measuredProgram": null,
+          "timingMode": "countdown",
+          "isOpen": false
+        }
+      ],
+      "page": 0,
+      "size": 20,
+      "totalElements": 1,
+      "totalPages": 1
+    },
+    "Snapshot": {
+      "revision": 6,
+      "serverTime": "2026-10-08T20:40:27.830278Z",
+      "user": {
+        "id": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+        "email": "contract-review@done.example",
+        "displayName": "Alex",
+        "timezone": "Europe/Bucharest",
+        "language": "ro",
+        "notificationsEnabled": true,
+        "passwordEnabled": true,
+        "appleEnabled": false,
+        "revision": 6,
+        "onboarded": true
+      },
+      "households": [
+        {
+          "id": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+          "name": "My home",
+          "localizationKey": "household.default",
+          "applianceCount": 1,
+          "createdAt": "2026-10-08T20:40:27.236929Z",
+          "version": 0,
+          "ownerId": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad"
+        }
+      ],
+      "appliances": [
+        {
+          "id": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "householdId": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+          "name": "Mașina de spălat",
+          "kind": "washer",
+          "status": "idle",
+          "notificationsEnabled": true,
+          "programs": [
+            {
+              "id": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+              "name": "Bumbac 40°C",
+              "minutes": 96,
+              "suggested": true,
+              "version": 0,
+              "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+              "localizationKey": "Bumbac 40°C",
+              "isCustom": false,
+              "sortOrder": 0
+            },
+            {
+              "id": "a4db338b-e97d-41c4-99b5-398b2600710c",
+              "name": "Rapid 30°C",
+              "minutes": 30,
+              "suggested": true,
+              "version": 0,
+              "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+              "localizationKey": "Rapid 30°C",
+              "isCustom": false,
+              "sortOrder": 1
+            },
+            {
+              "id": "2dd24666-87db-40d9-ad16-5a870a95adfc",
+              "name": "Eco 40–60°C",
+              "minutes": 210,
+              "suggested": true,
+              "version": 0,
+              "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+              "localizationKey": "Eco 40–60°C",
+              "isCustom": false,
+              "sortOrder": 2
+            }
+          ],
+          "activeSession": null,
+          "createdAt": "2026-10-08T20:40:27.489278Z",
+          "version": 0
+        }
+      ],
+      "recentSessions": [
+        {
+          "id": "ad2bc42c-287d-4d2e-b465-088a97037351",
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "programId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "programName": "Bumbac 40°C",
+          "minutes": 35,
+          "mode": "countdown",
+          "status": "collected",
+          "startedAt": "2026-10-08T20:40:27.569337Z",
+          "expectedEnd": "2026-10-08T21:15:27.569337Z",
+          "completedAt": "2026-10-08T20:40:27.690910Z",
+          "collectedAt": "2026-10-08T20:40:27.729972Z",
+          "canceledAt": null,
+          "elapsedSeconds": 0,
+          "version": 2,
+          "serverTime": "2026-10-08T20:40:27.847603Z",
+          "sourceProgramId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "programSnapshot": {
+            "name": "Bumbac 40°C",
+            "minutes": 35,
+            "localizationKey": "Bumbac 40°C",
+            "isCustom": false
+          },
+          "measuredProgram": null,
+          "timingMode": "countdown",
+          "isOpen": false
+        }
+      ],
+      "hasMoreSessions": false,
+      "recentActivity": [
+        {
+          "id": "3a0b1a3d-e24e-40d0-959b-ac2552abd369",
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "sessionId": "ad2bc42c-287d-4d2e-b465-088a97037351",
+          "kind": "finished",
+          "title": "Rufele sunt gata!",
+          "detail": "Mașina de spălat · Finalizare confirmată de tine.",
+          "occurredAt": "2026-10-08T20:40:27.690910Z",
+          "readAt": null,
+          "titleKey": "Rufele sunt gata!",
+          "message": {
+            "key": "{0} · Finalizare confirmată de tine.",
+            "arguments": [
+              "Mașina de spălat"
+            ]
+          },
+          "programSnapshot": null
+        },
+        {
+          "id": "b73ab21f-941d-43ce-b230-ff1a1d231461",
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "sessionId": "ad2bc42c-287d-4d2e-b465-088a97037351",
+          "kind": "started",
+          "title": "Timer pornit.",
+          "detail": "Bumbac 40°C · 35 min",
+          "occurredAt": "2026-10-08T20:40:27.569337Z",
+          "readAt": null,
+          "titleKey": "Timer pornit.",
+          "message": {
+            "key": "{0} · {1} min",
+            "arguments": [
+              "Bumbac 40°C",
+              "35"
+            ]
+          },
+          "programSnapshot": {
+            "name": "Bumbac 40°C",
+            "minutes": 35,
+            "localizationKey": "Bumbac 40°C",
+            "isCustom": false
+          }
+        }
+      ],
+      "unreadActivityCount": 2
+    },
+    "Export": {
+      "schemaVersion": 1,
+      "exportedAt": "2026-10-08T20:40:27.906336Z",
+      "user": {
+        "id": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+        "email": "contract-review@done.example",
+        "displayName": "Alex",
+        "timezone": "Europe/Bucharest",
+        "language": "ro",
+        "notificationsEnabled": true,
+        "passwordEnabled": true,
+        "appleEnabled": false,
+        "revision": 6,
+        "onboarded": true
+      },
+      "households": [
+        {
+          "id": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+          "name": "My home",
+          "localizationKey": "household.default",
+          "applianceCount": 1,
+          "createdAt": "2026-10-08T20:40:27.236929Z",
+          "version": 0,
+          "ownerId": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad"
+        }
+      ],
+      "appliances": [
+        {
+          "id": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "householdId": "0c058e0e-d34a-47d6-bb1f-ae2a9efba4ad",
+          "name": "Mașina de spălat",
+          "kind": "washer",
+          "status": "idle",
+          "notificationsEnabled": true,
+          "programs": [
+            {
+              "id": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+              "name": "Bumbac 40°C",
+              "minutes": 96,
+              "suggested": true,
+              "version": 0,
+              "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+              "localizationKey": "Bumbac 40°C",
+              "isCustom": false,
+              "sortOrder": 0
+            },
+            {
+              "id": "a4db338b-e97d-41c4-99b5-398b2600710c",
+              "name": "Rapid 30°C",
+              "minutes": 30,
+              "suggested": true,
+              "version": 0,
+              "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+              "localizationKey": "Rapid 30°C",
+              "isCustom": false,
+              "sortOrder": 1
+            },
+            {
+              "id": "2dd24666-87db-40d9-ad16-5a870a95adfc",
+              "name": "Eco 40–60°C",
+              "minutes": 210,
+              "suggested": true,
+              "version": 0,
+              "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+              "localizationKey": "Eco 40–60°C",
+              "isCustom": false,
+              "sortOrder": 2
+            }
+          ],
+          "activeSession": null,
+          "createdAt": "2026-10-08T20:40:27.489278Z",
+          "version": 0
+        }
+      ],
+      "sessions": [
+        {
+          "id": "ad2bc42c-287d-4d2e-b465-088a97037351",
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "programId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "programName": "Bumbac 40°C",
+          "minutes": 35,
+          "mode": "countdown",
+          "status": "collected",
+          "startedAt": "2026-10-08T20:40:27.569337Z",
+          "expectedEnd": "2026-10-08T21:15:27.569337Z",
+          "completedAt": "2026-10-08T20:40:27.690910Z",
+          "collectedAt": "2026-10-08T20:40:27.729972Z",
+          "canceledAt": null,
+          "elapsedSeconds": 0,
+          "version": 2,
+          "serverTime": "2026-10-08T20:40:27.916141Z",
+          "sourceProgramId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "programSnapshot": {
+            "name": "Bumbac 40°C",
+            "minutes": 35,
+            "localizationKey": "Bumbac 40°C",
+            "isCustom": false
+          },
+          "measuredProgram": null,
+          "timingMode": "countdown",
+          "isOpen": false
+        }
+      ],
+      "activity": [
+        {
+          "id": "3a0b1a3d-e24e-40d0-959b-ac2552abd369",
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "sessionId": "ad2bc42c-287d-4d2e-b465-088a97037351",
+          "kind": "finished",
+          "title": "Rufele sunt gata!",
+          "detail": "Mașina de spălat · Finalizare confirmată de tine.",
+          "occurredAt": "2026-10-08T20:40:27.690910Z",
+          "readAt": null,
+          "titleKey": "Rufele sunt gata!",
+          "message": {
+            "key": "{0} · Finalizare confirmată de tine.",
+            "arguments": [
+              "Mașina de spălat"
+            ]
+          },
+          "programSnapshot": null
+        },
+        {
+          "id": "b73ab21f-941d-43ce-b230-ff1a1d231461",
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "sessionId": "ad2bc42c-287d-4d2e-b465-088a97037351",
+          "kind": "started",
+          "title": "Timer pornit.",
+          "detail": "Bumbac 40°C · 35 min",
+          "occurredAt": "2026-10-08T20:40:27.569337Z",
+          "readAt": null,
+          "titleKey": "Timer pornit.",
+          "message": {
+            "key": "{0} · {1} min",
+            "arguments": [
+              "Bumbac 40°C",
+              "35"
+            ]
+          },
+          "programSnapshot": {
+            "name": "Bumbac 40°C",
+            "minutes": 35,
+            "localizationKey": "Bumbac 40°C",
+            "isCustom": false
+          }
+        }
+      ]
+    },
+    "FrontendStatistics": {
+      "period": "week",
+      "windowDays": 7,
+      "from": "2026-10-01T20:40:27.938817Z",
+      "to": "2026-10-08T20:40:27.938817Z",
+      "timezone": "Europe/Bucharest",
+      "completedSessions": 1,
+      "totalDurationSeconds": 0,
+      "averageDurationSeconds": 0,
+      "mostUsedProgram": {
+        "name": "Bumbac 40°C",
+        "minutes": 35,
+        "localizationKey": "Bumbac 40°C",
+        "isCustom": false
+      },
+      "changePercent": null,
+      "usagePerDay": [
+        {
+          "date": "2026-10-02",
+          "sessions": 0
+        },
+        {
+          "date": "2026-10-03",
+          "sessions": 0
+        },
+        {
+          "date": "2026-10-04",
+          "sessions": 0
+        },
+        {
+          "date": "2026-10-05",
+          "sessions": 0
+        },
+        {
+          "date": "2026-10-06",
+          "sessions": 0
+        },
+        {
+          "date": "2026-10-07",
+          "sessions": 0
+        },
+        {
+          "date": "2026-10-08",
+          "sessions": 1
+        }
+      ],
+      "recentSessions": [
+        {
+          "id": "ad2bc42c-287d-4d2e-b465-088a97037351",
+          "applianceId": "a321d1f9-8be6-4261-8cc8-d1f8ae5d94bc",
+          "programId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "programName": "Bumbac 40°C",
+          "minutes": 35,
+          "mode": "countdown",
+          "status": "collected",
+          "startedAt": "2026-10-08T20:40:27.569337Z",
+          "expectedEnd": "2026-10-08T21:15:27.569337Z",
+          "completedAt": "2026-10-08T20:40:27.690910Z",
+          "collectedAt": "2026-10-08T20:40:27.729972Z",
+          "canceledAt": null,
+          "elapsedSeconds": 0,
+          "version": 2,
+          "serverTime": "2026-10-08T20:40:27.952410Z",
+          "sourceProgramId": "4328552f-591e-475a-a3a6-ee0b51d7eb1a",
+          "programSnapshot": {
+            "name": "Bumbac 40°C",
+            "minutes": 35,
+            "localizationKey": "Bumbac 40°C",
+            "isCustom": false
+          },
+          "measuredProgram": null,
+          "timingMode": "countdown",
+          "isOpen": false
+        }
+      ]
+    },
+    "MeasuredProgram": {
+      "name": "Programul meu"
+    },
+    "MeasuredSessionView": {
+      "id": "530b6eb5-5c9f-4872-b1a9-e6c55463f675",
+      "applianceId": "845c707a-6ae8-4a53-b12b-9d3a9551e10c",
+      "programId": null,
+      "programName": "Sesiune",
+      "minutes": 0,
+      "mode": "stopwatch",
+      "status": "collected",
+      "startedAt": "2026-10-08T20:40:28.010088Z",
+      "expectedEnd": null,
+      "completedAt": "2026-10-08T20:40:28.038725Z",
+      "collectedAt": "2026-10-08T20:40:28.038725Z",
+      "canceledAt": null,
+      "elapsedSeconds": 0,
+      "version": 2,
+      "serverTime": "2026-10-08T20:40:28.074416Z",
+      "sourceProgramId": null,
+      "programSnapshot": {
+        "name": "Sesiune",
+        "minutes": 0,
+        "localizationKey": "timer.session",
+        "isCustom": false
+      },
+      "measuredProgram": {
+        "name": "Programul meu",
+        "minutes": 1,
+        "localizationKey": null,
+        "isCustom": true
+      },
+      "timingMode": "stopwatch",
+      "isOpen": false
+    },
+    "RepeatSessionView": {
+      "id": "d952e025-eb7f-4c7b-8f30-52fc059db599",
+      "applianceId": "845c707a-6ae8-4a53-b12b-9d3a9551e10c",
+      "programId": "cd4ef6d4-f8c3-4bf0-8269-25a69cbc477c",
+      "programName": "Programul meu",
+      "minutes": 1,
+      "mode": "countdown",
+      "status": "running",
+      "startedAt": "2026-10-08T20:40:28.094339Z",
+      "expectedEnd": "2026-10-08T20:41:28.094339Z",
+      "completedAt": null,
+      "collectedAt": null,
+      "canceledAt": null,
+      "elapsedSeconds": 0,
+      "version": 0,
+      "serverTime": "2026-10-08T20:40:28.102697Z",
+      "sourceProgramId": null,
+      "programSnapshot": {
+        "name": "Programul meu",
+        "minutes": 1,
+        "localizationKey": null,
+        "isCustom": true
+      },
+      "measuredProgram": null,
+      "timingMode": "countdown",
+      "isOpen": true
+    }
+  }
+}
