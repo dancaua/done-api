@@ -102,3 +102,28 @@ Vezi README pentru pornire locală, inclusiv Run din IDE. Nu aplica migrările a
 Compose folosește MySQL 8.4, volum `done-mysql`, `log_bin_trust_function_creators=ON` pentru trigger-ele de integritate și port DB nepublic în producție. `MYSQL_ROOT_PASSWORD`, `DATABASE_PASSWORD` (done_admin/migrări) și `RUNTIME_DATABASE_PASSWORD` trebuie să fie diferite. Root este folosit numai în containerul DB pentru provisionarea conturilor. `production.sh` rulează provisionarea după healthcheck, inclusiv pe volume existente. Callbackul Flyway din profilul prod acordă runtime-ului doar DML pe fiecare tabel de domeniu, excluzând istoricul. Guardul de startup refuză privilegii globale, la nivel de schemă, roluri și GRANT OPTION.
 
 JDBC păstrează UTC, timeouts finite, `allowMultiQueries=false` și `allowLoadLocalInfile=false`. În prod TLS DB este obligatoriu (`REQUIRED`) pe rețeaua Docker privată. Pentru un serviciu DB extern configurează CA/truststore și `DATABASE_SSL_MODE=VERIFY_IDENTITY`, inclusiv pentru conexiunea Flyway. Nu publica portul MySQL pe internet.
+
+## Bază MySQL creată manual, fără istoric Flyway
+
+Dacă startup-ul raportează o schemă nevidă fără `flyway_schema_history`, nu rula din nou V1 peste tabele. Înainte de adoptare, salvează un backup și compară schema cu V1 aplicată într-o bază MySQL izolată: coloane, indexuri, relații, CHECK-uri, triggere și rânduri inițiale. Reproduce charset-ul și SQL mode-ul folosite la crearea schemei. Dacă există diferențe de structură sau un istoric Flyway deja prezent, oprește procedura și reconciliază separat situația.
+
+Numai pentru o schemă verificată ca echivalentă cu V1, înregistrează explicit baseline-ul o singură dată, din rădăcina backendului, cu Java 21 și `.env` local verificat:
+
+```bash
+(
+  set -a
+  source .env
+  set +a
+  ./mvnw -B --no-transfer-progress \
+    -Dflyway.baselineVersion=1 \
+    '-Dflyway.baselineDescription=Verified existing MySQL V1 schema' \
+    flyway:baseline
+)
+./scripts/migrate.sh migrate
+./scripts/migrate.sh validate
+./scripts/migrate.sh info
+```
+
+Baseline-ul adaugă istoricul Flyway și marchează versiunea 1 drept punct de pornire; V1 nu este reexecutată. Păstrează `baseline-on-migrate=false` și `clean-disabled=true`. Modificările următoare se livrează prin V2, V3 etc., fără editarea V1. Vezi [comanda oficială Flyway baseline](https://documentation.red-gate.com/flyway/reference/commands/baseline).
+
+Aplicat la 9 octombrie 2026 pentru `done_db` din DigitalOcean: 16 tabele, 135 de coloane, 15 CHECK-uri și 5 triggere au corespuns exact referinței V1. Backupul SQL și comparațiile au fost salvate local în `backups/flyway-baseline-20261009-144621/`, ignorat de Git. Migrarea și validarea au trecut; structura domeniului și numărul rândurilor au rămas identice înainte și după baseline. JAR-ul a pornit apoi cu configurația locală existentă și Hibernate validate; health/readiness au răspuns HTTP 200, `UP`, iar `/api/v1/public-config` a răspuns HTTP 200. Procesul temporar de verificare a fost oprit.
