@@ -21,6 +21,7 @@ public class ApiErrors {
   @ExceptionHandler(ApiException.class)
   ResponseEntity<ProblemDetail> handle(ApiException e) {
     return ResponseEntity.status(e.getStatus())
+        .headers(headers -> { if(e.getStatus()==HttpStatus.TOO_MANY_REQUESTS) headers.set("Retry-After","300"); if(e.getStatus()==HttpStatus.SERVICE_UNAVAILABLE) headers.set("Retry-After","60"); })
         .body(problem(e.getStatus(), e.getCode(), e.getMessage()));
   }
 
@@ -51,6 +52,12 @@ public class ApiErrors {
     return ResponseEntity.badRequest()
         .body(
             problem(HttpStatus.BAD_REQUEST, "invalid_request", "Cerere invalidă sau incompletă."));
+  }
+
+  @ExceptionHandler({org.springframework.dao.QueryTimeoutException.class,org.springframework.dao.CannotAcquireLockException.class})
+  ResponseEntity<ProblemDetail> busy(Exception e) {
+    return ResponseEntity.status(503).header("Retry-After","1")
+        .body(problem(HttpStatus.SERVICE_UNAVAILABLE,"server_busy","Service busy. Please retry."));
   }
 
   @ExceptionHandler({

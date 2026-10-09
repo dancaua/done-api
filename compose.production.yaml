@@ -1,12 +1,17 @@
 services:
   db:
     image: postgres:16-alpine
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 128
     environment:
       POSTGRES_DB: done
       POSTGRES_USER: done
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
+      RUNTIME_DATABASE_PASSWORD: ${RUNTIME_DATABASE_PASSWORD:?Set runtime database password}
     volumes:
       - done-postgres:/var/lib/postgresql/data
+      - ./deploy/provision-runtime-role.sh:/docker-entrypoint-initdb.d/10-runtime-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U done -d done"]
       interval: 5s
@@ -17,6 +22,9 @@ services:
     stop_grace_period: 30s
   api:
     build: .
+    mem_limit: 1024m
+    cpus: 2.0
+    pids_limit: 256
     depends_on:
       db:
         condition: service_healthy
@@ -24,10 +32,21 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       PORT: 8080
       DATABASE_URL: jdbc:postgresql://db:5432/done
-      DATABASE_USER: done
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
+      DATABASE_USER: done_runtime
+      DATABASE_PASSWORD: ${RUNTIME_DATABASE_PASSWORD:?Set runtime database password}
+      MIGRATION_DATABASE_USER: done
+      MIGRATION_DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
       JWT_SECRET: ${JWT_SECRET:?Set production signing key}
       JWT_ISSUER: ${JWT_ISSUER:-done-api}
+      RECOVERY_ENABLED: 'true'
+      RECOVERY_FROM: ${RECOVERY_FROM:?Set verified sender email}
+      SMTP_HOST: ${SMTP_HOST:?Set SMTP host}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:?Set SMTP username}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?Set SMTP password}
+      SMTP_AUTH: 'true'
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_SSL: ${SMTP_SSL:-false}
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set public HTTPS origin}
       PUBLIC_SITE_MOCK: ${PUBLIC_SITE_MOCK:-false}
       OPERATOR_NAME: ${OPERATOR_NAME:?Set operator name}
@@ -60,6 +79,10 @@ services:
     stop_grace_period: 30s
   web:
     image: caddy:2-alpine
+    mem_limit: 256m
+    cpus: 1.0
+    pids_limit: 128
+    security_opt: [no-new-privileges:true]
     environment:
       PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Set real public domain}
     ports: ["80:80", "443:443", "443:443/udp"]

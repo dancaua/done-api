@@ -4,8 +4,14 @@
   <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>4.1.1</version><relativePath/></parent>
   <groupId>org.adancau</groupId><artifactId>done-api</artifactId><version>0.0.1-SNAPSHOT</version>
   <name>done-api</name><description>DONE. account and appliance session API</description>
-  <properties><java.version>21</java.version></properties>
+  <properties>
+    <java.version>21</java.version>
+    <!-- Security patch overrides until the Boot BOM includes these fixes. See docs/security.md. -->
+    <tomcat.version>11.0.25</tomcat.version>
+    <jackson-bom.version>3.1.7</jackson-bom.version>
+  </properties>
   <dependencies>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-mail</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-webmvc</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>

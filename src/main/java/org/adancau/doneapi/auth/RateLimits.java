@@ -18,8 +18,13 @@ public class RateLimits {
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public boolean consume(String bucket, int limit) {
-    var now = java.sql.Timestamp.from(clock.instant());
-    var expiry = java.sql.Timestamp.from(clock.instant().plusSeconds(300));
+    return consume(bucket,limit,300);
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public boolean consume(String bucket, int limit, int seconds) {
+    var now = org.adancau.doneapi.common.DatabaseTime.at(clock.instant());
+    var expiry = org.adancau.doneapi.common.DatabaseTime.at(clock.instant().plusSeconds(seconds));
     return Boolean.TRUE.equals(
         jdbc.queryForObject(
             "INSERT INTO auth_rate_buckets(bucket_key,requests,expires_at) VALUES (?,1,?) ON"

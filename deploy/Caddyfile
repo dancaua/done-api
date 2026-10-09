@@ -1,5 +1,34 @@
+{
+    log {
+        format filter {
+            wrap json
+            fields {
+                request>uri replace REDACTED
+                request>headers delete
+                request>remote_ip delete
+            }
+        }
+    }
+    servers {
+        max_header_size 16KB
+        timeouts {
+            read_header 5s
+            read_body 10s
+            write 30s
+            idle 30s
+        }
+    }
+}
 {$PUBLIC_DOMAIN} {
     encode zstd gzip
-    # No access log: capability URLs and account data must not enter request logs.
-    reverse_proxy api:8080
+    request_body {
+        max_size 64KB
+    }
+    # No request logs: capability URLs and account data must stay out of logs.
+    reverse_proxy api:8080 {
+        transport http {
+            dial_timeout 3s
+            response_header_timeout 25s
+        }
+    }
 }

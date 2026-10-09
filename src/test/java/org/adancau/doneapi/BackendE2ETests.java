@@ -29,6 +29,10 @@ import tools.jackson.databind.json.JsonMapper;
     properties = {
       "app.jobs.enabled=false",
       "app.rate.enabled=false",
+      "app.rate.concurrent-auth=16",
+      "app.recovery.enabled=true",
+      "app.recovery.delivery-enabled=false",
+      "app.recovery.from=security@done.test",
       "app.apple.enabled=true",
       "app.apple.encryption-key=MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
       "app.auth.secret=YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWY=",
@@ -37,9 +41,12 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(BackendE2ETests.TestTime.class)
 class BackendE2ETests {
   private static PostgreSQLContainer postgres;
+  private static final TestSmtpServer smtp=new TestSmtpServer();
 
   @DynamicPropertySource
   static void database(DynamicPropertyRegistry p) {
+    p.add("spring.mail.host",() -> "localhost");
+    p.add("spring.mail.port",smtp::port);
     String external = System.getenv("TEST_DATABASE_URL");
     if (external != null && !external.isBlank()) {
       p.add("spring.datasource.url", () -> external);
@@ -50,8 +57,7 @@ class BackendE2ETests {
           "spring.datasource.password",
           () -> System.getenv().getOrDefault("TEST_DATABASE_PASSWORD", ""));
     } else {
-      postgres = new PostgreSQLContainer("postgres:16-alpine");
-      postgres.start();
+      if (postgres==null) { postgres = new PostgreSQLContainer("postgres:16-alpine"); postgres.start(); }
       p.add("spring.datasource.url", postgres::getJdbcUrl);
       p.add("spring.datasource.username", postgres::getUsername);
       p.add("spring.datasource.password", postgres::getPassword);
@@ -94,6 +100,8 @@ class BackendE2ETests {
   @Autowired SessionEventProcessor processor;
   @Autowired AppleTokenCipher cipher;
   @Autowired RateLimits rates;
+  @Autowired PasswordRecoveryService recovery;
+  @Autowired org.springframework.security.oauth2.jwt.JwtEncoder jwtEncoder;
   @MockitoBean AppleGateway apple;
 
   @Autowired
@@ -109,9 +117,10 @@ class BackendE2ETests {
 
   @BeforeEach
   void resetState() {
-    jdbc.execute("TRUNCATE app_users,apple_challenges,auth_rate_buckets,session_shares CASCADE");
+    jdbc.execute("TRUNCATE app_users,apple_challenges,auth_rate_buckets,session_shares,recovery_mail_queue CASCADE");
     clock.now = Instant.parse("2026-10-05T12:00:00Z");
     reset(apple);
+    smtp.messages.clear();smtp.rejectNext=false;
   }
 
   Response call(String method, String path, Object body, String token, String key) {
@@ -1768,4 +1777,171 @@ class BackendE2ETests {
     assertFalse(config.body().toString().contains("secret"));assertFalse(config.body().toString().contains("encryption"));assertFalse(config.body().get("appleWebEnabled").asBoolean());
   }
 
+
+  String requestRecovery(User user) throws Exception {
+    expect(202,"POST","/auth/forgot-password",Map.of("email",user.email()),null,null);
+    assertTrue(recovery.deliverNext());
+    String body=smtp.takeBody();
+    var match=java.util.regex.Pattern.compile("#token=([A-Za-z0-9_-]{43})").matcher(body);
+    assertTrue(match.find(),"Reset capability missing from SMTP message");
+    assertTrue(body.contains("http://127.0.0.1:8080/reset-password?lang="));
+    return match.group(1);
+  }
+
+  @Test
+  void passwordResetDeliversRealEmailConsumesTokenAndRevokesEverySession() throws Exception {
+    var u=user();var second=expect(200,"POST","/auth/login",Map.of("email",u.email(),"password",PASSWORD),null,null);
+    String token=requestRecovery(u),newPassword="New secure password 123!";
+    String stored=jdbc.queryForObject("SELECT token_hash FROM password_reset_tokens",String.class);
+    assertNotEquals(token,stored);assertEquals(org.adancau.doneapi.common.Crypto.hash(token),stored);
+    expect(204,"POST","/auth/reset-password",Map.of("token",token,"newPassword",newPassword),null,null);
+    expect(401,"GET","/me",null,u.token(),null);
+    expect(401,"GET","/me",null,second.get("accessToken").asText(),null);
+    expect(401,"POST","/auth/refresh",Map.of("refreshToken",u.refresh()),null,null);
+    expect(401,"POST","/auth/login",Map.of("email",u.email(),"password",PASSWORD),null,null);
+    expect(200,"POST","/auth/login",Map.of("email",u.email(),"password",newPassword),null,null);
+    assertEquals("invalid_reset_token",expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null).get("code").asText());
+    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens",Integer.class));
+    assertTrue(recovery.deliverNext());String changed=smtp.takeBody();assertFalse(changed.contains(newPassword));assertFalse(changed.contains("#token="));
+  }
+
+  @Test
+  void recoveryUnknownAppleOnlyAndThrottledAddressesHaveIdenticalResponses() throws Exception {
+    var u=user();var accepted=expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null);
+    assertEquals(accepted,expect(202,"POST","/auth/forgot-password",Map.of("email","nobody@example.test"),null,null));
+    for(int i=0;i<12;i++)assertEquals(accepted,expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null));
+    assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue",Integer.class));
+    // An Apple-only identity must not gain a password through email recovery.
+    jdbc.update("UPDATE app_users SET password_hash=NULL WHERE id=?",UUID.fromString(u.id()));
+    while(recovery.deliverNext()){}
+    assertTrue(smtp.messages.isEmpty());assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens",Integer.class));
+  }
+
+  @Test
+  void resetLinksExpireAndAuthenticatedPasswordChangeCancelsTokensAndQueuedMail() throws Exception {
+    var u=user();String token=requestRecovery(u);clock.advance(900);
+    expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null);
+    // Authenticate again after the old access token expires.
+    var logged=expect(200,"POST","/auth/login",Map.of("email",u.email(),"password",PASSWORD),null,null);
+    token=requestRecovery(u);
+    expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null);
+    expect(204,"POST","/me/password",Map.of("currentPassword",PASSWORD,"newPassword","Another password 123!"),logged.get("accessToken").asText(),null);
+    expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null);
+    assertFalse(recovery.deliverNext());assertTrue(smtp.messages.isEmpty());
+  }
+
+  @Test
+  void resetTokenCannotWinTwiceUnderConcurrentRequests() throws Exception {
+    var u=user();String token=requestRecovery(u);
+    try(var pool=Executors.newFixedThreadPool(2)) {
+      var gate=new CountDownLatch(1);var futures=new ArrayList<Future<Response>>();
+      for(int i=0;i<2;i++)futures.add(pool.submit(() -> {gate.await();return call("POST","/auth/reset-password",Map.of("token",token,"newPassword","Concurrent password 123!"),null,null);}));
+      gate.countDown();var statuses=new ArrayList<Integer>();for(var f:futures)statuses.add(f.get(15,TimeUnit.SECONDS).status());
+      statuses.sort(Integer::compareTo);assertEquals(List.of(204,400),statuses);
+    }
+  }
+
+  @Test
+  void recoveryRejectsInvalidAndOversizedPasswordsWithoutConsumingLink() throws Exception {
+    var u=user();String token=requestRecovery(u);
+    for(String password:List.of("short","é".repeat(40),"a".repeat(65)))
+      expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",password),null,null);
+    expect(400,"POST","/auth/reset-password",Map.of("token",org.adancau.doneapi.common.Crypto.randomToken(),"newPassword",PASSWORD),null,null);
+    expect(204,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null);
+  }
+
+  @Test
+  void failedSmtpDeliveryRemainsQueuedAndRetriesWithoutExposingToken() throws Exception {
+    var u=user();smtp.rejectNext=true;
+    var body=expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null);
+    assertFalse(body.toString().contains("token"));assertTrue(recovery.deliverNext());assertTrue(smtp.messages.isEmpty());
+    assertEquals(1,jdbc.queryForObject("SELECT attempts FROM recovery_mail_queue",Integer.class));
+    assertFalse(recovery.deliverNext());clock.advance(60);assertTrue(recovery.deliverNext());assertTrue(smtp.takeBody().contains("#token="));
+    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue",Integer.class));
+  }
+
+  @Test
+  void deleteAccountCancelsOutstandingRecovery() throws Exception {
+    var u=user();String token=requestRecovery(u);
+    expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null);
+    jdbc.update("INSERT INTO recovery_mail_queue(id,email,kind,created_at,expires_at,next_attempt_at) VALUES (?,?,'changed',?,?,?)",
+        UUID.randomUUID(),u.email(),java.sql.Timestamp.from(clock.instant()),java.sql.Timestamp.from(clock.instant().plusSeconds(3600)),java.sql.Timestamp.from(clock.instant()));
+    expect(204,"DELETE","/me",Map.of("password",PASSWORD),u.token(),null);
+    expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null);
+    assertFalse(recovery.deliverNext());assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens",Integer.class));
+    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue",Integer.class));
+  }
+
+  @Test
+  void everyPrivateControllerRouteRequiresAuthenticationBeforeDtoParsing() {
+    for(var info:mapping.getHandlerMethods().keySet())for(String template:info.getPatternValues()) {
+      if(!template.startsWith("/api/v1/") || template.startsWith("/api/v1/localizations/") || template.equals("/api/v1/public-config"))continue;
+      if(template.startsWith("/api/v1/auth/") && !template.contains("logout"))continue;
+      String path=template.replaceAll("\\{[^}]+}",UUID.randomUUID().toString());
+      for(var method:info.getMethodsCondition().getMethods())
+        assertEquals(401,raw(method.name(),path,null,null).status(),method+" "+path);
+    }
+    var u=user();
+    for(String path:List.of("/api/v1/future-admin","/api/v1/auth/login","/api/shares"))
+      assertEquals(path.startsWith("/api/shares")?401:403,raw("PATCH",path,Map.of(),u.token()).status());
+    assertEquals(403,raw("GET","/actuator/env",null,u.token()).status());
+    assertEquals(403,raw("GET","/site/private-config.json",null,u.token()).status());
+  }
+
+  @Test
+  void injectionPayloadsAreLiteralDataAndNeverChangeOwnershipOrSchema() {
+    var u=user();var other=user();String payload="x'); DROP TABLE app_users;--";
+    var appliance=expect(201,"POST","/appliances",Map.of("kind","custom","name",payload),u.token(),key());
+    assertEquals(payload,appliance.get("name").asText());assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM app_users",Integer.class));
+    expect(404,"GET","/appliances/"+appliance.get("id").asText(),null,other.token(),null);
+    expect(400,"GET","/appliances/'%20OR%201=1--",null,u.token(),null);
+    assertNotEquals(200,call("POST","/auth/login",Map.of("email","' OR 1=1 --@example.test","password",PASSWORD),null,null).status());
+    var script=expect(201,"POST","/households",Map.of("name","<script>alert(1)</script>"),u.token(),key());
+    assertEquals("<script>alert(1)</script>",script.get("name").asText());
+    assertEquals(1,expect(200,"GET","/households",null,other.token(),null).size());
+  }
+
+  @Test
+  void malformedJsonAndUnexpectedFieldsAreRejected() throws Exception {
+    String url="http://127.0.0.1:"+port+"/api/v1/auth/login";
+    for(String body:List.of("{\"email\":\"a@example.test\",\"email\":\"b@example.test\",\"password\":\"x\"}",
+        "{\"email\":\"a@example.test\",\"password\":\"x\"} {}", "{\"extra\":"+"[".repeat(40)+"0"+"]".repeat(40)+"}")) {
+      var response=http.send(HttpRequest.newBuilder(URI.create(url)).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
+      assertEquals(400,response.statusCode());assertFalse(response.body().contains("Exception"));
+    }
+    expect(400,"POST","/auth/register",Map.of("email","a@example.test","password",PASSWORD,"displayName","A","roles",List.of("ADMIN")),null,null);
+  }
+
+  @Test
+  void recoveryPagesUseStrictHeadersAndDoNotAllowForeignOrigins() throws Exception {
+    for(String page:List.of("/forgot-password","/reset-password")) {
+      var response=http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+page)).GET().build(),HttpResponse.BodyHandlers.ofString());
+      assertEquals(200,response.statusCode());assertEquals("no-referrer",response.headers().firstValue("Referrer-Policy").orElseThrow());
+      assertTrue(response.headers().firstValue("Cache-Control").orElseThrow().contains("no-store"));
+      assertEquals("DENY",response.headers().firstValue("X-Frame-Options").orElseThrow());
+      assertFalse(response.headers().firstValue("Content-Security-Policy").orElseThrow().contains("appleid"));
+      assertTrue(response.body().contains("/site/recovery.js"));assertFalse(response.body().contains("token="));
+    }
+    var cors=http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/v1/me"))
+        .header("Origin","https://attacker.invalid").header("Access-Control-Request-Method","PATCH").method("OPTIONS",HttpRequest.BodyPublishers.noBody()).build(),HttpResponse.BodyHandlers.ofString());
+    assertTrue(cors.statusCode()>=400);assertTrue(cors.headers().firstValue("Access-Control-Allow-Origin").isEmpty());
+  }
+
+
+  @Test
+  void jwtRejectsTamperingWrongAudienceIssuerAndMalformedSessionClaims() throws Exception {
+    var u=user();String sid=com.nimbusds.jwt.SignedJWT.parse(u.token()).getJWTClaimsSet().getStringClaim("sid");
+    var valid=new HashMap<String,Object>();valid.put("sub",u.id());valid.put("sid",sid);valid.put("iss","done-api");
+    valid.put("aud",List.of("done-apple"));valid.put("iat",clock.instant());valid.put("exp",clock.instant().plusSeconds(900));valid.put("nbf",clock.instant());
+    for(var invalid:List.<Map<String,Object>>of(Map.of("aud",List.of("other-app")),Map.of("iss","other-issuer"),Map.of("sid","not-a-uuid"),
+        Map.of("iat",clock.instant().plusSeconds(60)),Map.of("exp",clock.instant().plusSeconds(86400)),Map.of("nbf",clock.instant().plusSeconds(60)))) {
+      var claims=new HashMap<>(valid);claims.putAll(invalid);
+      var encoded=jwtEncoder.encode(org.springframework.security.oauth2.jwt.JwtEncoderParameters.from(
+          org.springframework.security.oauth2.jwt.JwsHeader.with(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build(),
+          org.springframework.security.oauth2.jwt.JwtClaimsSet.builder().claims(c -> c.putAll(claims)).build()));
+      expect(401,"GET","/me",null,encoded.getTokenValue(),null);
+    }
+    String[] parts=u.token().split("\\.");
+    expect(401,"GET","/me",null,parts[0]+"."+parts[1]+"."+org.adancau.doneapi.common.Crypto.randomToken(),null);
+  }
 }

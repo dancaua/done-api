@@ -10,7 +10,7 @@ import tools.jackson.databind.json.JsonMapper;
 /** Explicit documentation tool; normal tests never rewrite the contract. */
 public final class OpenApiGenerator {
   private static final Map<String,Object> schemas = new TreeMap<>();
-  private static final Set<String> requests = Set.of("Register","Login","Refresh","AppleLogin","UpdateProfile",
+  private static final Set<String> requests = Set.of("Register","Login","Refresh","AppleLogin","ForgotPassword","ResetPassword","UpdateProfile",
       "ChangePassword","DeleteAccount","CreateAppliance","MoveAppliance","ApplianceNotificationSettings",
       "RenameAppliance","ProgramInput","UpdateProgram","StartSession","ExtendSession","MeasuredProgram",
       "CreateHousehold","RenameHousehold","CreateProjection","UpdateProjection","SharedSnapshot","ProgramSnapshot");

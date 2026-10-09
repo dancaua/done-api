@@ -1,4 +1,11 @@
 services:
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles: [mail]
+    ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]
+    mem_limit: 128m
+    pids_limit: 64
+
   db:
     image: postgres:16-alpine
     environment:
@@ -28,6 +35,10 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Run scripts/init-env.sh first}
       JWT_SECRET: ${JWT_SECRET:?Run scripts/init-env.sh first}
       JWT_ISSUER: ${JWT_ISSUER:-done-api}
+      RECOVERY_ENABLED: ${RECOVERY_ENABLED:-false}
+      RECOVERY_FROM: ${RECOVERY_FROM:-security@done.example}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
       APPLE_ENABLED: ${APPLE_ENABLED:-false}
       APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-ro.done.app}
       APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}

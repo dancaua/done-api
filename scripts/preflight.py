@@ -32,6 +32,16 @@ if len(values.get('DATABASE_PASSWORD',''))<24: errors.append('DATABASE_PASSWORD 
 def secret(key):
     try: return len(base64.b64decode(values.get(key,''),validate=True))
     except Exception: return 0
+for key in ('RUNTIME_DATABASE_PASSWORD','SMTP_PASSWORD'):
+    if len(values.get(key,''))< (24 if key=='RUNTIME_DATABASE_PASSWORD' else 1): errors.append(f'Configure {key}.')
+if values.get('RUNTIME_DATABASE_PASSWORD')==values.get('DATABASE_PASSWORD'): errors.append('Use different runtime and migration database passwords.')
+for key in ('RECOVERY_FROM','SMTP_HOST','SMTP_USERNAME'):
+    if placeholder(values.get(key,'')): errors.append(f'Configure a real {key}.')
+if not re.fullmatch(r'[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+',values.get('RECOVERY_FROM','')): errors.append('Invalid RECOVERY_FROM.')
+if values.get('SMTP_STARTTLS','true')!='true' and values.get('SMTP_SSL','false')!='true': errors.append('SMTP must use STARTTLS or TLS.')
+try: smtp_port=int(values.get('SMTP_PORT','587'))
+except ValueError: smtp_port=0
+if not 1<=smtp_port<=65535: errors.append('Invalid SMTP_PORT.')
 if secret('JWT_SECRET')<32: errors.append('JWT_SECRET must decode to at least 32 random bytes.')
 try: retention=int(values.get('BACKUP_RETENTION_DAYS','30'))
 except ValueError: retention=0

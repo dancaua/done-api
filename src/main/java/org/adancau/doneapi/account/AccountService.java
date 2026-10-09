@@ -18,6 +18,7 @@ public class AccountService {
   private final AppleAuthService apple;
   private final UserViews views;
   private final Clock clock;
+  private final PasswordRecoveryService recovery;
 
   public AccountService(
       UserRepository users,
@@ -26,7 +27,8 @@ public class AccountService {
       PasswordEncoder passwords,
       AppleAuthService apple,
       UserViews views,
-      Clock clock) {
+      Clock clock, PasswordRecoveryService recovery) {
+    this.recovery=recovery;
     this.users = users;
     this.sessions = sessions;
     this.mutations = mutations;
@@ -82,6 +84,7 @@ public class AccountService {
     u.setPasswordHash(passwords.encode(r.newPassword()));
     u.setRevision(u.getRevision() + 1);
     sessions.revokeAll(owner, clock.instant());
+    recovery.invalidate(owner,u.getEmail());
   }
 
   @Transactional
@@ -92,6 +95,7 @@ public class AccountService {
       if (!passwords.matches(r.password(),u.getPasswordHash())) throw ApiException.unauthorized();
     } else apple.requireRecentApple(owner,sid);
     apple.revokeFor(owner);
+    recovery.invalidate(owner,u.getEmail());
     users.delete(u);
     users.flush();
   }

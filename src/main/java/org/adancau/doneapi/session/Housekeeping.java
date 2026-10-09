@@ -31,14 +31,16 @@ public class Housekeeping {
   @Transactional
   public void clean() {
     var now = clock.instant();
+    jdbc.update("DELETE FROM password_reset_tokens WHERE expires_at<=?", org.adancau.doneapi.common.DatabaseTime.at(now));
+    jdbc.update("DELETE FROM recovery_mail_queue WHERE expires_at<=? OR attempts>=3 AND next_attempt_at<=?",org.adancau.doneapi.common.DatabaseTime.at(now),org.adancau.doneapi.common.DatabaseTime.at(now));
     challenges.deleteExpired(now.minusSeconds(3600));
     receipts.deleteExpired(now.minusSeconds(2592000));
-    jdbc.update("DELETE FROM session_shares WHERE expires_at<=?", java.sql.Timestamp.from(now));
+    jdbc.update("DELETE FROM session_shares WHERE expires_at<=?", org.adancau.doneapi.common.DatabaseTime.at(now));
     jdbc.update(
         "DELETE FROM auth_rate_buckets WHERE expires_at < ?",
-        java.sql.Timestamp.from(now.minusSeconds(300)));
+        org.adancau.doneapi.common.DatabaseTime.at(now.minusSeconds(300)));
     jdbc.update(
         "DELETE FROM auth_sessions WHERE expires_at < ?",
-        java.sql.Timestamp.from(now.minusSeconds(604800)));
+        org.adancau.doneapi.common.DatabaseTime.at(now.minusSeconds(604800)));
   }
 }

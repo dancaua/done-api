@@ -17,6 +17,11 @@ public final class AuthDtos {
   public record Login(
       @NotBlank @Email @Size(max = 254) String email, @NotBlank @Size(max = 64) String password) {}
 
+  public record ForgotPassword(@NotBlank @Email @Size(max=254) String email) {}
+  public record ResetPassword(@NotBlank @Pattern(regexp="[A-Za-z0-9_-]{43}") String token,
+      @NotBlank @Size(min=12,max=64) String newPassword) {}
+  public record RecoveryAccepted(String code,String detail) {}
+
   public record Refresh(@NotBlank @Pattern(regexp = "[A-Za-z0-9_-]{43}") String refreshToken) {}
 
   public record Tokens(

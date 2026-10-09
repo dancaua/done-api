@@ -6,47 +6,34 @@
     "description" : "Native Apple API. Email/password JWT and native Sign in with Apple. All timestamps UTC; history is server-owned. Durable activity events; APNs transport is not part of this phase."
   },
   "servers" : [ {
-    "description" : "Local development; configure PUBLIC_ORIGIN for deployed links.",
-    "url" : "http://127.0.0.1:8080"
+    "url" : "http://127.0.0.1:8080",
+    "description" : "Local development; configure PUBLIC_ORIGIN for deployed links."
   } ],
   "components" : {
-    "securitySchemes" : {
-      "bearerAuth" : {
-        "bearerFormat" : "JWT",
-        "scheme" : "bearer",
-        "type" : "http"
-      },
-      "writerCapability" : {
-        "description" : "43-character base64url private writer key; never a JWT and never included in the public link.",
-        "type" : "http",
-        "bearerFormat" : "Private write capability",
-        "scheme" : "bearer"
-      }
-    },
     "schemas" : {
       "ActivityView" : {
         "type" : "object",
         "properties" : {
           "id" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
           },
           "applianceId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
           },
           "sessionId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -74,16 +61,16 @@
           },
           "occurredAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "readAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
@@ -118,8 +105,8 @@
         "properties" : {
           "challengeId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -133,8 +120,8 @@
           },
           "expiresAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
@@ -147,8 +134,8 @@
         "type" : "object",
         "properties" : {
           "challengeId" : {
-            "format" : "uuid",
-            "type" : "string"
+            "type" : "string",
+            "format" : "uuid"
           },
           "identityToken" : {
             "type" : "string",
@@ -192,8 +179,8 @@
             "type" : "boolean"
           },
           "version" : {
-            "format" : "int64",
             "type" : "integer",
+            "format" : "int64",
             "minimum" : 0
           }
         },
@@ -205,16 +192,16 @@
         "properties" : {
           "id" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
           },
           "householdId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -250,10 +237,10 @@
           },
           "programs" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ProgramView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
@@ -267,15 +254,15 @@
           },
           "createdAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "version" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           }
         },
         "additionalProperties" : false,
@@ -314,10 +301,10 @@
           },
           "programs" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/Suggestion"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
@@ -365,8 +352,8 @@
           },
           "householdId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -399,8 +386,8 @@
             "$ref" : "#/components/schemas/SharedSnapshot"
           },
           "revision" : {
-            "format" : "int64",
             "type" : "integer",
+            "format" : "int64",
             "minimum" : 0
           },
           "writeKey" : {
@@ -408,8 +395,8 @@
             "pattern" : "[A-Za-z0-9_-]{43}"
           },
           "commandId" : {
-            "format" : "uuid",
-            "type" : "string"
+            "type" : "string",
+            "format" : "uuid"
           }
         },
         "additionalProperties" : false,
@@ -420,15 +407,15 @@
         "properties" : {
           "date" : {
             "anyOf" : [ {
-              "format" : "date",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date"
             }, {
               "type" : "null"
             } ]
           },
           "sessions" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           }
         },
         "additionalProperties" : false,
@@ -452,13 +439,13 @@
         "type" : "object",
         "properties" : {
           "schemaVersion" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "exportedAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
@@ -472,40 +459,40 @@
           },
           "households" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/HouseholdView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
           },
           "appliances" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ApplianceView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
           },
           "sessions" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/SessionView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
           },
           "activity" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ActivityView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
@@ -518,14 +505,25 @@
         "type" : "object",
         "properties" : {
           "minutes" : {
-            "format" : "int32",
             "type" : "integer",
+            "format" : "int32",
             "minimum" : 1,
             "maximum" : 1440
           }
         },
         "additionalProperties" : false,
         "required" : [ "minutes" ]
+      },
+      "ForgotPassword" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "maxLength" : 254
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "email" ]
       },
       "FrontendStatistics" : {
         "type" : "object",
@@ -539,21 +537,21 @@
             } ]
           },
           "windowDays" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "from" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "to" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
@@ -566,16 +564,16 @@
             } ]
           },
           "completedSessions" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "totalDurationSeconds" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "averageDurationSeconds" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "mostUsedProgram" : {
             "anyOf" : [ {
@@ -586,28 +584,28 @@
           },
           "changePercent" : {
             "anyOf" : [ {
-              "format" : "double",
-              "type" : "number"
+              "type" : "number",
+              "format" : "double"
             }, {
               "type" : "null"
             } ]
           },
           "usagePerDay" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/Day"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
           },
           "recentSessions" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/SessionView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
@@ -621,8 +619,8 @@
         "properties" : {
           "id" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -642,25 +640,25 @@
             } ]
           },
           "applianceCount" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "createdAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "version" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "ownerId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -695,31 +693,31 @@
           },
           "publishedAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "serverTime" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "expiresAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "refreshAfterSeconds" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           }
         },
         "additionalProperties" : false,
@@ -737,10 +735,10 @@
           },
           "arguments" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "type" : "string"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
@@ -778,12 +776,12 @@
         "type" : "object",
         "properties" : {
           "householdId" : {
-            "format" : "uuid",
-            "type" : "string"
+            "type" : "string",
+            "format" : "uuid"
           },
           "version" : {
-            "format" : "int64",
             "type" : "integer",
+            "format" : "int64",
             "minimum" : 0
           }
         },
@@ -794,83 +792,83 @@
         "type" : "object",
         "properties" : {
           "revision" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           }
         },
         "additionalProperties" : false,
         "required" : [ "revision" ]
       },
       "PageResponse_ActivityView" : {
-        "required" : [ "items", "page", "size", "totalElements", "totalPages" ],
-        "type" : "object",
         "properties" : {
           "items" : {
+            "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/ActivityView"
-            },
-            "type" : "array"
+            }
           },
           "page" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "size" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "totalElements" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "totalPages" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           }
-        }
+        },
+        "type" : "object",
+        "required" : [ "items", "page", "size", "totalElements", "totalPages" ]
       },
       "PageResponse_SessionView" : {
-        "required" : [ "items", "page", "size", "totalElements", "totalPages" ],
-        "type" : "object",
         "properties" : {
           "items" : {
+            "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/SessionView"
-            },
-            "type" : "array"
+            }
           },
           "page" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "size" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "totalElements" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "totalPages" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           }
-        }
+        },
+        "type" : "object",
+        "required" : [ "items", "page", "size", "totalElements", "totalPages" ]
       },
       "Problem" : {
-        "required" : [ "status", "code", "detail" ],
-        "type" : "object",
         "properties" : {
           "code" : {
             "type" : "string"
           },
-          "status" : {
-            "type" : "integer"
-          },
           "detail" : {
             "type" : "string"
+          },
+          "status" : {
+            "type" : "integer"
           }
-        }
+        },
+        "type" : "object",
+        "required" : [ "status", "code", "detail" ]
       },
       "ProgramInput" : {
         "type" : "object",
@@ -883,8 +881,8 @@
             } ]
           },
           "minutes" : {
-            "format" : "int32",
             "type" : "integer",
+            "format" : "int32",
             "minimum" : 0,
             "maximum" : 1440
           }
@@ -899,8 +897,8 @@
             "type" : "string"
           },
           "minutes" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "localizationKey" : {
             "anyOf" : [ {
@@ -922,8 +920,8 @@
         "properties" : {
           "id" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -936,20 +934,20 @@
             } ]
           },
           "minutes" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "suggested" : {
             "type" : "boolean"
           },
           "version" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "applianceId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -965,12 +963,33 @@
             "type" : "boolean"
           },
           "sortOrder" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           }
         },
         "additionalProperties" : false,
         "required" : [ "id", "name", "minutes", "suggested", "version", "applianceId", "localizationKey", "isCustom", "sortOrder" ]
+      },
+      "RecoveryAccepted" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "detail" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "code", "detail" ]
       },
       "Refresh" : {
         "type" : "object",
@@ -1017,8 +1036,8 @@
             "type" : "string"
           },
           "version" : {
-            "format" : "int64",
             "type" : "integer",
+            "format" : "int64",
             "minimum" : 0
           }
         },
@@ -1032,37 +1051,53 @@
             "type" : "string"
           },
           "version" : {
-            "format" : "int64",
             "type" : "integer",
+            "format" : "int64",
             "minimum" : 0
           }
         },
         "additionalProperties" : false,
         "required" : [ "name", "version" ]
       },
+      "ResetPassword" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "pattern" : "[A-Za-z0-9_-]{43}"
+          },
+          "newPassword" : {
+            "type" : "string",
+            "minLength" : 12,
+            "maxLength" : 64
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "token", "newPassword" ]
+      },
       "SessionView" : {
         "type" : "object",
         "properties" : {
           "id" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
           },
           "applianceId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
           },
           "programId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -1075,8 +1110,8 @@
             } ]
           },
           "minutes" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "mode" : {
             "anyOf" : [ {
@@ -1095,64 +1130,64 @@
           },
           "startedAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "expectedEnd" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "completedAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "collectedAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "canceledAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "elapsedSeconds" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "version" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "serverTime" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "sourceProgramId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -1190,14 +1225,14 @@
         "type" : "object",
         "properties" : {
           "schemaVersion" : {
-            "format" : "int32",
             "type" : "integer",
+            "format" : "int32",
             "minimum" : 1,
             "maximum" : 1
           },
           "id" : {
-            "format" : "uuid",
-            "type" : "string"
+            "type" : "string",
+            "format" : "uuid"
           },
           "applianceName" : {
             "type" : "string"
@@ -1214,44 +1249,44 @@
             "type" : "string"
           },
           "startedAt" : {
-            "format" : "date-time",
-            "type" : "string"
+            "type" : "string",
+            "format" : "date-time"
           },
           "expectedEnd" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "completedAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "collectedAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "canceledAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
           },
           "capturedAt" : {
-            "format" : "date-time",
-            "type" : "string"
+            "type" : "string",
+            "format" : "date-time"
           },
           "language" : {
             "type" : "string",
@@ -1265,13 +1300,13 @@
         "type" : "object",
         "properties" : {
           "revision" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "serverTime" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
@@ -1285,30 +1320,30 @@
           },
           "households" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/HouseholdView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
           },
           "appliances" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ApplianceView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
           },
           "recentSessions" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/SessionView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
@@ -1318,17 +1353,17 @@
           },
           "recentActivity" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ActivityView"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
           },
           "unreadActivityCount" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           }
         },
         "additionalProperties" : false,
@@ -1339,8 +1374,8 @@
         "properties" : {
           "programId" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -1369,8 +1404,8 @@
           },
           "minutes" : {
             "anyOf" : [ {
-              "format" : "int32",
               "type" : "integer",
+              "format" : "int32",
               "minimum" : 1,
               "maximum" : 1440
             }, {
@@ -1394,16 +1429,16 @@
           },
           "from" : {
             "anyOf" : [ {
-              "format" : "date",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date"
             }, {
               "type" : "null"
             } ]
           },
           "to" : {
             "anyOf" : [ {
-              "format" : "date",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date"
             }, {
               "type" : "null"
             } ]
@@ -1416,16 +1451,16 @@
             } ]
           },
           "completedSessions" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "totalDurationSeconds" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "averageDurationSeconds" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "mostUsedProgram" : {
             "anyOf" : [ {
@@ -1436,18 +1471,18 @@
           },
           "changePercent" : {
             "anyOf" : [ {
-              "format" : "double",
-              "type" : "number"
+              "type" : "number",
+              "format" : "double"
             }, {
               "type" : "null"
             } ]
           },
           "usagePerDay" : {
             "anyOf" : [ {
+              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/Day"
-              },
-              "type" : "array"
+              }
             }, {
               "type" : "null"
             } ]
@@ -1467,8 +1502,8 @@
             } ]
           },
           "minutes" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int32"
           },
           "localizationKey" : {
             "anyOf" : [ {
@@ -1499,8 +1534,8 @@
             } ]
           },
           "expiresIn" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "refreshToken" : {
             "anyOf" : [ {
@@ -1511,8 +1546,8 @@
           },
           "refreshExpiresAt" : {
             "anyOf" : [ {
-              "format" : "date-time",
-              "type" : "string"
+              "type" : "string",
+              "format" : "date-time"
             }, {
               "type" : "null"
             } ]
@@ -1578,14 +1613,14 @@
             "type" : "string"
           },
           "minutes" : {
-            "format" : "int32",
             "type" : "integer",
+            "format" : "int32",
             "minimum" : 1,
             "maximum" : 1440
           },
           "version" : {
-            "format" : "int64",
             "type" : "integer",
+            "format" : "int64",
             "minimum" : 0
           }
         },
@@ -1599,8 +1634,8 @@
             "$ref" : "#/components/schemas/SharedSnapshot"
           },
           "revision" : {
-            "format" : "int64",
             "type" : "integer",
+            "format" : "int64",
             "minimum" : 0
           }
         },
@@ -1612,8 +1647,8 @@
         "properties" : {
           "id" : {
             "anyOf" : [ {
-              "format" : "uuid",
-              "type" : "string"
+              "type" : "string",
+              "format" : "uuid"
             }, {
               "type" : "null"
             } ]
@@ -1656,8 +1691,8 @@
             "type" : "boolean"
           },
           "revision" : {
-            "format" : "int64",
-            "type" : "integer"
+            "type" : "integer",
+            "format" : "int64"
           },
           "onboarded" : {
             "type" : "boolean"
@@ -1665,6 +1700,19 @@
         },
         "additionalProperties" : false,
         "required" : [ "id", "email", "displayName", "timezone", "language", "notificationsEnabled", "passwordEnabled", "appleEnabled", "revision", "onboarded" ]
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "bearerFormat" : "JWT",
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "writerCapability" : {
+        "type" : "http",
+        "description" : "43-character base64url private writer key; never a JWT and never included in the public link.",
+        "scheme" : "bearer",
+        "bearerFormat" : "Private write capability"
       }
     }
   },
@@ -1775,12 +1823,12 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -1808,11 +1856,11 @@
         } ],
         "parameters" : [ {
           "name" : "token",
+          "in" : "path",
+          "required" : true,
           "schema" : {
             "type" : "string"
-          },
-          "required" : true,
-          "in" : "path"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -1836,11 +1884,11 @@
         "security" : [ ],
         "parameters" : [ {
           "name" : "token",
+          "in" : "path",
+          "required" : true,
           "schema" : {
             "type" : "string"
-          },
-          "required" : true,
-          "in" : "path"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -1883,11 +1931,11 @@
         },
         "parameters" : [ {
           "name" : "token",
+          "in" : "path",
+          "required" : true,
           "schema" : {
             "type" : "string"
-          },
-          "required" : true,
-          "in" : "path"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -1922,30 +1970,30 @@
         } ],
         "parameters" : [ {
           "name" : "page",
-          "schema" : {
-            "format" : "int32",
-            "type" : "integer",
-            "default" : 0
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
         }, {
           "name" : "size",
-          "schema" : {
-            "format" : "int32",
-            "type" : "integer",
-            "default" : 20
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
         }, {
           "name" : "householdId",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -1980,20 +2028,20 @@
         } ],
         "parameters" : [ {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "householdId",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2028,20 +2076,20 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2076,12 +2124,12 @@
         } ],
         "parameters" : [ {
           "name" : "householdId",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2099,10 +2147,10 @@
             "content" : {
               "application/json" : {
                 "schema" : {
+                  "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/ApplianceView"
-                  },
-                  "type" : "array"
+                  }
                 }
               }
             }
@@ -2127,12 +2175,12 @@
         },
         "parameters" : [ {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2167,20 +2215,20 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2213,12 +2261,12 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2261,20 +2309,20 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2319,20 +2367,20 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2377,20 +2425,20 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2435,20 +2483,20 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2483,28 +2531,28 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "programId",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2547,28 +2595,28 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "programId",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2603,30 +2651,30 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "page",
-          "schema" : {
-            "format" : "int32",
-            "type" : "integer",
-            "default" : 0
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
         }, {
           "name" : "size",
-          "schema" : {
-            "format" : "int32",
-            "type" : "integer",
-            "default" : 20
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2669,20 +2717,20 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -2808,6 +2856,45 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Tokens"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password" : {
+      "post" : {
+        "operationId" : "RecoveryController_request_609209390",
+        "tags" : [ "Recovery" ],
+        "security" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ForgotPassword"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "202" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RecoveryAccepted"
                 }
               }
             }
@@ -2980,6 +3067,38 @@
         }
       }
     },
+    "/api/v1/auth/reset-password" : {
+      "post" : {
+        "operationId" : "RecoveryController_reset_1523623440",
+        "tags" : [ "Recovery" ],
+        "security" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetPassword"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "204" : {
+            "description" : "Success"
+          }
+        }
+      }
+    },
     "/api/v1/catalog" : {
       "get" : {
         "operationId" : "ApplianceController_catalog_434660745",
@@ -3003,10 +3122,10 @@
             "content" : {
               "application/json" : {
                 "schema" : {
+                  "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/CatalogItem"
-                  },
-                  "type" : "array"
+                  }
                 }
               }
             }
@@ -3037,10 +3156,10 @@
             "content" : {
               "application/json" : {
                 "schema" : {
+                  "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/HouseholdView"
-                  },
-                  "type" : "array"
+                  }
                 }
               }
             }
@@ -3065,12 +3184,12 @@
         },
         "parameters" : [ {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3105,20 +3224,20 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3151,12 +3270,12 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3199,20 +3318,20 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3245,11 +3364,11 @@
         "security" : [ ],
         "parameters" : [ {
           "name" : "language",
+          "in" : "path",
+          "required" : true,
           "schema" : {
             "type" : "string"
-          },
-          "required" : true,
-          "in" : "path"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3267,8 +3386,8 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : true,
-                  "type" : "object"
+                  "type" : "object",
+                  "additionalProperties" : true
                 }
               }
             }
@@ -3356,12 +3475,12 @@
         },
         "parameters" : [ {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3514,8 +3633,8 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : true,
-                  "type" : "object"
+                  "type" : "object",
+                  "additionalProperties" : true
                 }
               }
             }
@@ -3546,10 +3665,10 @@
             "content" : {
               "application/json" : {
                 "schema" : {
+                  "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/LiveActivityShareDTO"
-                  },
-                  "type" : "array"
+                  }
                 }
               }
             }
@@ -3566,19 +3685,19 @@
         } ],
         "parameters" : [ {
           "name" : "token",
+          "in" : "path",
+          "required" : true,
           "schema" : {
             "type" : "string"
-          },
-          "required" : true,
-          "in" : "path"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3613,12 +3732,12 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3653,20 +3772,20 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3701,20 +3820,20 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3749,20 +3868,20 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3807,20 +3926,20 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3865,20 +3984,20 @@
         },
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3913,20 +4032,20 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -3961,20 +4080,20 @@
         } ],
         "parameters" : [ {
           "name" : "id",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "path",
           "required" : true,
-          "in" : "path"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         }, {
           "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "header",
           "required" : true,
-          "in" : "header"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -4040,29 +4159,29 @@
         } ],
         "parameters" : [ {
           "name" : "period",
+          "in" : "query",
+          "required" : false,
           "schema" : {
             "enum" : [ "week", "month", "year" ],
             "type" : "string",
             "default" : "week"
-          },
-          "required" : false,
-          "in" : "query"
+          }
         }, {
           "name" : "date",
-          "schema" : {
-            "format" : "date",
-            "type" : "string"
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
         }, {
           "name" : "householdId",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -4097,21 +4216,21 @@
         } ],
         "parameters" : [ {
           "name" : "period",
+          "in" : "query",
+          "required" : false,
           "schema" : {
             "enum" : [ "week", "month", "year" ],
             "type" : "string",
             "default" : "week"
-          },
-          "required" : false,
-          "in" : "query"
+          }
         }, {
           "name" : "householdId",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
+          "in" : "query",
           "required" : false,
-          "in" : "query"
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
         } ],
         "responses" : {
           "default" : {
@@ -4169,6 +4288,35 @@
     "/delete-account" : {
       "get" : {
         "operationId" : "PublicSiteController_page_4252539386",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forgot-password" : {
+      "get" : {
+        "operationId" : "PublicSiteController_recovery_238218742",
         "tags" : [ "PublicSite" ],
         "security" : [ ],
         "responses" : {
@@ -4253,6 +4401,35 @@
         }
       }
     },
+    "/reset-password" : {
+      "get" : {
+        "operationId" : "PublicSiteController_recovery_1788750664",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Error; code is stable and independent of language."
+          },
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/share/{token}" : {
       "get" : {
         "operationId" : "PublicSiteController_share_3092332512",
@@ -4260,11 +4437,11 @@
         "security" : [ ],
         "parameters" : [ {
           "name" : "token",
+          "in" : "path",
+          "required" : true,
           "schema" : {
             "type" : "string"
-          },
-          "required" : true,
-          "in" : "path"
+          }
         } ],
         "responses" : {
           "default" : {

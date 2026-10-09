@@ -1,3 +1,4 @@
+import {copy as recoveryCopy} from './recovery-copy.js';
 import { copy, languageNames } from './copy.js';
 
 const el=id=>document.getElementById(id);
@@ -58,7 +59,7 @@ function renderDelete(content){
       try{authentication=await request('/api/v1/auth/login','POST',{email,password:secret});password=secret;}
       catch(e){error(e.status===401?'credentialsError':e.status===429?'rateError':'networkError');}
       finally{busy=false;if(authentication)render();else submit.disabled=false;}
-    });card.append(form);
+    });card.append(form,node('a',recoveryCopy[language].forgot,{href:'/forgot-password?lang='+language}));
     if(configuration.appleWebEnabled)card.append(button('apple',appleLogin,'apple'));
     else card.append(node('p',t('appleUnavailable'),{class:'muted status'}));
     content.append(card);

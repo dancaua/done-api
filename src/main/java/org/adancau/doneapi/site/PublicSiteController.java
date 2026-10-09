@@ -16,6 +16,13 @@ public class PublicSiteController {
         .header("Cross-Origin-Opener-Policy","same-origin-allow-popups")
         .body(new ClassPathResource("static/site/index.html"));
   }
+  @GetMapping(value={"/forgot-password","/reset-password"},produces=MediaType.TEXT_HTML_VALUE)
+  public ResponseEntity<Resource> recovery() {
+    return ResponseEntity.ok().header("Cache-Control","no-store").header("Referrer-Policy","no-referrer")
+        .header("Content-Security-Policy","default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+        .header("Cross-Origin-Opener-Policy","same-origin")
+        .body(new ClassPathResource("static/site/recovery.html"));
+  }
   @GetMapping(value="/share/{token}",produces=MediaType.TEXT_HTML_VALUE)
   public ResponseEntity<Resource> share(@PathVariable String token) {
     if (!token.matches("[A-Za-z0-9_-]{43}")) return ResponseEntity.notFound().build();

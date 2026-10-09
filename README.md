@@ -283,3 +283,7 @@ Pagini publice, în 9 limbi: `/privacy` (alias `/privacy-policy`), `/support`, `
 
 
 Notă de deploy: `TIMESTAMP` în V1 a fost păstrat la cererea proprietarului, după verificare clean cu 63 de teste. Pentru baze cu V1 originală deja aplicată există un checksum diferit; reconcilierea schemei/Flyway a fost amânată explicit. Nu s-a rulat repair. Vezi decizia de la finalul [deployment.md](docs/deployment.md).
+
+## Security hardening and password recovery
+
+See [security.md](docs/security.md) for the explicit route authorization matrix, rate/concurrency limits, SQL injection review, restricted production SQL role, recovery DTOs, SMTP setup, tests and the limits of application-level DDoS protection. The reset flow includes localized `/forgot-password` and `/reset-password` pages. iOS remains local-only. Production now needs separate runtime/migration database passwords and a verified SMTP sender with authenticated TLS; use the updated `.env.production.example` and `scripts/production.sh`. Existing V1–V9 migrations are unchanged; V10 adds recovery storage.
