@@ -11,7 +11,7 @@ starting the API. Re-running skips migrations already recorded by Flyway.
 
 Configuration: DATABASE_URL (JDBC), DATABASE_USER, DATABASE_PASSWORD.
 Values exported by the caller take precedence over the project's .env.
-Defaults: jdbc:mysql://localhost:3306/done_db, user done_admin, database selected by JDBC URL.
+Defaults: jdbc:mysql://localhost:3306/done_db, user doadmin, database selected by JDBC URL.
 Requires Java 21; Maven is provided by ./mvnw.
 
 Create the database first with scripts/create-database.sql, or use Compose's
@@ -42,7 +42,7 @@ if [[ -f .env ]]; then
   fi
 fi
 export DATABASE_URL="${DATABASE_URL:-jdbc:mysql://localhost:3306/done_db}"
-export DATABASE_USER="${DATABASE_USER:-done_admin}"
+export DATABASE_USER="${DATABASE_USER:-doadmin}"
 export DATABASE_PASSWORD="${DATABASE_PASSWORD:-}"
 
 if [[ $DATABASE_URL != jdbc:mysql://* ]]; then

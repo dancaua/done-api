@@ -18,7 +18,7 @@ Scriptul păstrează baza, datele și parolele conturilor deja existente. Folose
 
 ```dotenv
 DATABASE_URL=jdbc:mysql://localhost:3306/done_db
-DATABASE_USER=done_admin
+DATABASE_USER=doadmin
 DATABASE_PASSWORD=parola_locala
 ```
 

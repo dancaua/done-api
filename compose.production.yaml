@@ -8,7 +8,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MySQL root password}
       MYSQL_DATABASE: done_db
-      MYSQL_USER: done_admin
+      MYSQL_USER: ${MIGRATION_DATABASE_USER:-doadmin}
       MYSQL_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
       RUNTIME_DATABASE_PASSWORD: ${RUNTIME_DATABASE_PASSWORD:?Set runtime database password}
     volumes:
@@ -36,7 +36,7 @@ services:
       DATABASE_URL: jdbc:mysql://db:3306/done_db
       DATABASE_USER: done_runtime
       DATABASE_PASSWORD: ${RUNTIME_DATABASE_PASSWORD:?Set runtime database password}
-      MIGRATION_DATABASE_USER: done_admin
+      MIGRATION_DATABASE_USER: ${MIGRATION_DATABASE_USER:-doadmin}
       MIGRATION_DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set production database password}
       JWT_SECRET: ${JWT_SECRET:?Set production signing key}
       JWT_ISSUER: ${JWT_ISSUER:-done-api}
