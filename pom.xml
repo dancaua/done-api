@@ -6,6 +6,8 @@
   <name>done-api</name><description>DONE. account and appliance session API</description>
   <properties>
     <java.version>21</java.version>
+    <!-- Lombok 1.18.46 fails on JDK 27 (EndPosTable); keep IDE and Maven processors aligned. -->
+    <lombok.version>1.18.48</lombok.version>
     <!-- Security patch overrides until the Boot BOM includes these fixes. See docs/security.md. -->
     <tomcat.version>11.0.25</tomcat.version>
     <jackson-bom.version>3.1.7</jackson-bom.version>
@@ -50,6 +52,6 @@
         <dependency><groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId><version>${mysql.version}</version></dependency>
       </dependencies>
     </plugin>
-    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><annotationProcessorPaths><path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId></path></annotationProcessorPaths></configuration></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><annotationProcessorPaths><path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>${lombok.version}</version></path></annotationProcessorPaths></configuration></plugin>
   </plugins></build>
 </project>
