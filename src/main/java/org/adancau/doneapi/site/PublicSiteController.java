@@ -10,7 +10,12 @@ public class PublicSiteController {
   private final SiteProperties site;
   private final AppProperties props;
   public PublicSiteController(SiteProperties site,AppProperties props) { this.site=site;this.props=props; }
-  @GetMapping(value={"/","/privacy","/privacy-policy","/support","/contact","/delete-account","/account-deletion"},produces=MediaType.TEXT_HTML_VALUE)
+  @GetMapping(value="/",produces=MediaType.TEXT_HTML_VALUE)
+  public ResponseEntity<Resource> landing() {
+    return ResponseEntity.ok().header("Referrer-Policy","no-referrer")
+        .body(new ClassPathResource("static/site/landing.html"));
+  }
+  @GetMapping(value={"/privacy","/privacy-policy","/support","/contact","/delete-account","/account-deletion","/terms","/disclaimer"},produces=MediaType.TEXT_HTML_VALUE)
   public ResponseEntity<Resource> page() {
     return ResponseEntity.ok().header("Referrer-Policy","no-referrer")
         .header("Cross-Origin-Opener-Policy","same-origin-allow-popups")

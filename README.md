@@ -301,3 +301,20 @@ Notă de deploy: `TIMESTAMP` în V1 a fost păstrat la cererea proprietarului, d
 ## Security hardening and password recovery
 
 See [security.md](docs/security.md) for the explicit route authorization matrix, rate/concurrency limits, SQL injection review, restricted production SQL role, recovery DTOs, SMTP setup, tests and the limits of application-level DDoS protection. The reset flow includes localized `/forgot-password` and `/reset-password` pages. iOS remains local-only. Production now needs separate runtime/migration database passwords and a verified SMTP sender with authenticated TLS; use the updated `.env.production.example` and `scripts/production.sh`. The PostgreSQL migration archive remains unchanged; the MySQL baseline includes recovery storage.
+
+
+### Marketing landing page
+
+`GET /` serves the dedicated, indexable marketing page in `static/site/landing.html`. It works without account authentication or API requests. The privacy, support, contact and deletion pages retain their routes. The landing supports `en`, `ro`, `es`, `it`, `fr`, `de`, `pl`, `hi` and `ja`, with `?lang=ro` for an explicit language and `?appearance=light|dark` for an app theme override; otherwise it follows the browser theme.
+
+The download buttons link to `https://apps.apple.com/app/id6820980773`. The listing returned 404 while this page was prepared, so the landing displays a localized coming-soon message. After the app is publicly available, change `data-release="upcoming"` to `data-release="live"` on the landing body and remove the two fallback coming-soon paragraphs from the English HTML. The JavaScript hides these notes when the release is live. The default-language HTML remains readable without JavaScript.
+
+After deploying, use `https://done-appliance-f9pbg.ondigitalocean.app/` as the App Store Marketing URL. Configure the real operator/contact details in the existing public pages before public release.
+
+Assets are served locally: the official Apple App Store badge from `https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg`, the existing DONE app icon and a text-free generated illustration. There are no analytics trackers, third-party scripts, web fonts or login forms on the landing. Artwork provenance and the editing prompt are saved in `docs/landing-art-prompt.txt`.
+
+Validation: run `node scripts/check-site.mjs` with Node 24 and `./mvnw -Dtest=BackendE2ETests#publicPagesAndConfigurationAreAccessibleAndNeverExposePrivateConfiguration test` with Java 21. The HTTP test checks the marketing root, existing public pages and anonymous GET/HEAD access to the exact new asset paths. Its isolated MySQL container uses `done_db` to match the migrations' explicit database selection.
+
+### Native Apple sign-in and product scope
+
+See [Sign in with Apple configuration](docs/sign-in-with-apple.md) and [placeholder environment](deploy/apple.env.example). Public `/terms` and `/disclaimer` explain manual-only timers and safety limitations; privacy also describes Apple authentication data.

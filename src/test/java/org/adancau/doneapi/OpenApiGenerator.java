@@ -12,7 +12,7 @@ public final class OpenApiGenerator {
   private static final Map<String,Object> schemas = new TreeMap<>();
   private static final Set<String> requests = Set.of("Register","Login","Refresh","AppleLogin","ForgotPassword","ResetPassword","UpdateProfile",
       "ChangePassword","DeleteAccount","CreateAppliance","MoveAppliance","ApplianceNotificationSettings",
-      "RenameAppliance","ProgramInput","UpdateProgram","StartSession","ExtendSession","MeasuredProgram",
+      "RenameAppliance","ProgramInput","UpdateProgram","StartSession","ExtendSession","BackdateSession","MeasuredProgram",
       "CreateHousehold","RenameHousehold","CreateProjection","UpdateProjection","SharedSnapshot","ProgramSnapshot");
 
   private static Map<String,Object> type(Type type) {
@@ -84,7 +84,7 @@ public final class OpenApiGenerator {
       properties.put(component.getName(),property);if(mandatory)required.add(component.getName());
     }
     schema.put("type","object");schema.put("properties",properties);schema.put("additionalProperties",false);
-    if(c.getSimpleName().equals("StartSession")) schema.put("description","mode also accepts the JSON alias timingMode. Preset programId may be paired with a minutes override. All appliance kinds support stopwatch; stopwatch forbids preset ID and minutes override.");
+    if(c.getSimpleName().equals("StartSession")) schema.put("description","mode also accepts the JSON alias timingMode. Preset programId may be paired with a minutes override. All appliance kinds support stopwatch; stopwatch forbids preset ID and minutes override. Optional elapsedMinutes (0-1440) backdates stopwatch start using server time; omitted defaults to zero. Positive earlier time is forbidden for countdown.");
     if(c.getSimpleName().equals("ProgramSnapshot")) schema.put("description","Immutable value snapshot. name is literal user content or a built-in label; localizationKey is optional. Measured values are separate from the original snapshot.");
     if(!required.isEmpty())schema.put("required",required);
   }

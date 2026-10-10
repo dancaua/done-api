@@ -57,7 +57,7 @@ class BackendE2ETests {
           "spring.datasource.password",
           () -> System.getenv().getOrDefault("TEST_DATABASE_PASSWORD", ""));
     } else {
-      if (mysql==null) { mysql = new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=ON"); mysql.start(); }
+      if (mysql==null) { mysql = new MySQLContainer("mysql:8.4").withDatabaseName("done_db").withCommand("--log-bin-trust-function-creators=ON"); mysql.start(); }
       p.add("spring.datasource.url", mysql::getJdbcUrl);
       p.add("spring.datasource.username", mysql::getUsername);
       p.add("spring.datasource.password", mysql::getPassword);
@@ -1125,6 +1125,62 @@ class BackendE2ETests {
   }
 
   @Test
+  void backdatedStopwatchSynchronizesHistoryLearnsFullDurationAndRetriesOnlyOnce() {
+    var u = user(); var a = device(u, "washer");
+    String aid = a.get("id").asText();
+    var initial = clock.instant();
+    String startKey = key();
+    var payload = Map.of("mode", "stopwatch", "elapsedMinutes", 5);
+    var s = expect(201, "POST", "/appliances/" + aid + "/sessions", payload, u.token(), startKey);
+    String id = s.get("id").asText(); String path = "/sessions/" + id + "/backdate";
+    assertEquals(initial.minusSeconds(300).toString(), s.get("startedAt").asText());
+    assertEquals(300, s.get("elapsedSeconds").asLong()); assertTrue(s.get("expectedEnd").isNull());
+    clock.advance(30);
+    assertEquals(id, expect(201, "POST", "/appliances/" + aid + "/sessions", payload, u.token(), startKey).get("id").asText());
+    String correctionKey = key();
+    var updated = expect(200, "POST", path, Map.of("minutes", 7), u.token(), correctionKey);
+    assertEquals(initial.minusSeconds(720).toString(), updated.get("startedAt").asText());
+    assertEquals(750, updated.get("elapsedSeconds").asLong());
+    expect(200, "POST", path, Map.of("minutes", 7), u.token(), correctionKey);
+    expect(409, "POST", path, Map.of("minutes", 8), u.token(), correctionKey);
+    assertEquals(updated.get("startedAt"), expect(200, "GET", "/sessions/" + id, null, u.token(), null).get("startedAt"));
+    var history = expect(200, "GET", "/appliances/" + aid + "/sessions", null, u.token(), null);
+    assertEquals(updated.get("startedAt"), history.get("items").get(0).get("startedAt"));
+    assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM activity_events WHERE session_id=? AND kind='started'", Integer.class, id));
+    assertEquals(org.adancau.doneapi.common.DatabaseTime.at(initial.minusSeconds(720)),
+        jdbc.queryForObject("SELECT occurred_at FROM activity_events WHERE session_id=? AND kind='started'", java.time.LocalDateTime.class, id));
+    clock.advance(30);
+    var done = expect(200, "POST", "/sessions/" + id + "/complete", null, u.token(), key());
+    assertEquals(780, done.get("elapsedSeconds").asLong());
+    var learned = expect(200, "POST", "/sessions/" + id + "/measured-program", Map.of("name", "Measured"), u.token(), key());
+    assertEquals(13, learned.get("measuredProgram").get("minutes").asInt());
+    expect(409, "POST", path, Map.of("minutes", 5), u.token(), key());
+  }
+
+  @Test
+  void backdatingRequiresAuthenticationOwnershipValidMinutesAndRunningStopwatch() {
+    var u = user(); var other = user(); var a = device(u, "hob");
+    String aid = a.get("id").asText();
+    expect(400, "POST", "/appliances/" + aid + "/sessions", Map.of("mode", "countdown", "programId", a.get("programs").get(0).get("id").asText(), "elapsedMinutes", 5), u.token(), key());
+    for (int minutes : new int[]{-1, 1441})
+      expect(400, "POST", "/appliances/" + aid + "/sessions", Map.of("mode", "stopwatch", "elapsedMinutes", minutes), u.token(), key());
+    var countdown = start(u, a, "Test", 30); String cid = countdown.get("id").asText();
+    expect(400, "POST", "/sessions/" + cid + "/backdate", Map.of("minutes", 5), u.token(), key());
+    expect(200, "POST", "/sessions/" + cid + "/cancel", null, u.token(), key());
+    var s = expect(201, "POST", "/appliances/" + aid + "/sessions", Map.of("mode", "stopwatch", "elapsedMinutes", 1440), u.token(), key());
+    String id = s.get("id").asText(); String path = "/sessions/" + id + "/backdate";
+    assertEquals(86400, s.get("elapsedSeconds").asLong());
+    expect(401, "POST", path, Map.of("minutes", 5), null, key());
+    expect(404, "POST", path, Map.of("minutes", 5), other.token(), key());
+    for (int minutes : new int[]{-1, 0, 1441}) expect(400, "POST", path, Map.of("minutes", minutes), u.token(), key());
+    expect(400, "POST", path, Map.of(), u.token(), key());
+    expect(200, "POST", "/sessions/" + id + "/cancel", null, u.token(), key());
+    expect(409, "POST", path, Map.of("minutes", 5), u.token(), key());
+    expect(201, "POST", "/appliances/" + aid + "/sessions", Map.of("mode", "stopwatch"), u.token(), key());
+    expect(409, "POST", path, Map.of("minutes", 5), u.token(), key());
+  }
+
+  @Test
   void openApiMatchesLiveRoutesAndDtoProperties() throws Exception {
     var spec =
         json.readTree(java.nio.file.Files.readString(java.nio.file.Path.of("docs/openapi.json")));
@@ -1729,11 +1785,24 @@ class BackendE2ETests {
 
   @Test
   void publicPagesAndConfigurationAreAccessibleAndNeverExposePrivateConfiguration() throws Exception {
-    for(String path:List.of("/","/privacy","/privacy-policy","/support","/contact","/delete-account","/account-deletion")) {
+    for(String path:List.of("/","/privacy","/privacy-policy","/support","/contact","/delete-account","/account-deletion","/terms","/disclaimer")) {
       var response=http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+path)).GET().build(),HttpResponse.BodyHandlers.ofString());
-      assertEquals(200,response.statusCode(),path);assertTrue(response.body().contains("/site/site.js"));
+      assertEquals(200,response.statusCode(),path);
+      assertTrue(response.body().contains(path.equals("/") ? "/site/landing.js" : "/site/site.js"));
+      if(path.equals("/")) {
+        assertTrue(response.body().contains("https://apps.apple.com/app/id6820980773"));
+        assertFalse(response.body().contains("noindex"));
+      }
       assertEquals("no-referrer",response.headers().firstValue("Referrer-Policy").orElseThrow());
       assertTrue(response.headers().firstValue("Content-Security-Policy").orElseThrow().contains("frame-ancestors 'none'"));
+    }
+    for(String path:List.of("/site/landing.js","/site/landing.css","/site/landing-copy.js",
+        "/site/landing-appliances.jpg","/site/landing-icon.png","/site/app-store-badge.svg")) {
+      for(String method:List.of("GET","HEAD")) {
+        var response=http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+path))
+            .method(method,HttpRequest.BodyPublishers.noBody()).build(),HttpResponse.BodyHandlers.discarding());
+        assertEquals(200,response.statusCode(),method+" "+path);
+      }
     }
     var config=raw("GET","/api/v1/public-config",null,null);assertEquals(200,config.status());assertTrue(config.body().get("mock").asBoolean());
     assertFalse(config.body().toString().contains("secret"));assertFalse(config.body().toString().contains("encryption"));assertFalse(config.body().get("appleWebEnabled").asBoolean());

@@ -1,0 +1,9 @@
+Tool: built-in image_gen.imagegen; edit of DONE. App Store header v2.
+Project asset: src/main/resources/static/site/landing-appliances.jpg
+Purpose: text-free artwork for the multilingual marketing landing page.
+Original generated image: /Users/adancau/.codex/generated_images/01a10b63-e19e-77e3-990e-83de53c8f49a/exec-9a1d0ff9-b9c6-4a72-812d-b2a5a831de44.png
+Export: opaque JPEG using macOS sips, quality 87; 1254 × 1254.
+
+Prompt:
+Use case: precise-object-edit, website hero illustration. EDIT TARGET is the referenced DONE. marketing image. Create a square or near-square TEXT-FREE companion artwork for the right half of a responsive marketing landing page. Keep the exact visual identity: forest green studio background, white/silver appliances, mint circular timer arc and green checkmark badge. REMOVE all DONE wordmark and tagline from the artwork; no text of any kind. Preserve the five recognizable appliance types: a white front-loading washer in the foreground with its mint timer arc and checkmark, an understated oven and dishwasher just behind, a wall-mounted split air conditioner above, and an espresso machine with a plain white cup on a minimal green plinth on the right. Recompose the five-appliance group to fit comfortably in the center of a roughly square canvas, with balanced 12% empty forest-green margins and generous open breathing room. The washer should be the anchor but other appliances visibly recognizable, realistic restrained product rendering, premium Apple-like editorial lighting, subtle shadows and reflections, deep green #123027. No hardware sensor, no connected-device claims, no phones, no app UI, no new appliances, no logos or typography. Opaque background; finished website artwork.
+

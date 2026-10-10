@@ -66,9 +66,13 @@ public class SessionService {
     if (sessions.findByApplianceIdAndCollectedAtIsNullAndCanceledAtIsNull(applianceId).isPresent())
       throw ApiException.conflict("session_exists", "Close the active session first.");
     TimerMode mode = request.mode() == null ? TimerMode.countdown : request.mode();
+    int elapsedMinutes = request.elapsedMinutes() == null ? 0 : request.elapsedMinutes();
+    if (elapsedMinutes < 0 || elapsedMinutes > 1440 || (mode != TimerMode.stopwatch && elapsedMinutes != 0))
+      throw ApiException.invalid("Earlier time is only supported for stopwatch sessions, between 0 and 1440 minutes.");
     var s = new SessionEntity();
     s.setUserId(owner); s.setApplianceId(applianceId); s.setMode(mode); s.setStartedAt(clock.instant());
     if (mode == TimerMode.stopwatch) {
+      s.setStartedAt(s.getStartedAt().minusSeconds(elapsedMinutes * 60L));
       if (request.programId() != null || request.minutes() != null
           || (request.program() != null && request.program().minutes() != 0)
           || Boolean.TRUE.equals(request.saveProgram()))
@@ -112,6 +116,22 @@ public class SessionService {
     return views.session(s);
   }
 
+  public SessionDtos.SessionView backdate(UUID owner, UUID id, UUID key, SessionDtos.BackdateSession request) {
+    return mutations.execute(owner, key, "session.backdate:" + id, request,
+        SessionDtos.SessionView.class, user -> {
+          var s = owned(owner, id);
+          if (!s.isOpen() || s.getCompletedAt() != null)
+            throw ApiException.conflict("session_closed", "The session is no longer running.");
+          if (s.getMode() != TimerMode.stopwatch || request.minutes() < 1 || request.minutes() > 1440)
+            throw ApiException.invalid("Earlier time is only supported for running stopwatch sessions, between 1 and 1440 minutes.");
+          s.setStartedAt(s.getStartedAt().minusSeconds(request.minutes() * 60L));
+          events.backdateStarted(s);
+          events.reschedule(s);
+          sessions.flush();
+          return views.session(s);
+        });
+  }
+
   public SessionDtos.SessionView measured(UUID owner, UUID id, UUID key, SessionDtos.MeasuredProgram request) {
     return mutations.execute(owner, key, "session.measured-program:" + id, request,
         SessionDtos.SessionView.class, user -> {
@@ -140,7 +160,7 @@ public class SessionService {
       var value = source.getMeasuredProgramName() == null ? views.programSnapshot(source) : views.measuredSnapshot(source);
       var mode = value.minutes() == 0 ? TimerMode.stopwatch : TimerMode.countdown;
       return startNew(owner, source.getApplianceId(), new SessionDtos.StartSession(null,
-          new ApplianceDtos.ProgramInput(value.name(), value.minutes()), mode, mode == TimerMode.countdown, null), value);
+          new ApplianceDtos.ProgramInput(value.name(), value.minutes()), mode, mode == TimerMode.countdown, null, null), value);
     });
   }
 

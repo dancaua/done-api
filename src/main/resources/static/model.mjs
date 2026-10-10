@@ -39,6 +39,22 @@ export function statusOf(snapshot, now = Date.now()) {
   if (snapshot.completedAt) return 'finished';
   return snapshot.expectedEnd && Date.parse(snapshot.expectedEnd) <= now ? 'due' : 'running';
 }
+// A browser clock may advance an estimate, but only owner timestamps confirm
+// completion. Terminal durations remain frozen, including after collection.
+export function sessionPresentation(snapshot, now = Date.now()) {
+  const status = statusOf(snapshot, now);
+  const start = Date.parse(snapshot.startedAt);
+  const stop = snapshot.completedAt ?? snapshot.canceledAt;
+  const effectiveNow = stop ? Date.parse(stop) : now;
+  const end = snapshot.expectedEnd ? Date.parse(snapshot.expectedEnd) : null;
+  return {
+    status,
+    elapsedSeconds: Math.max(0, (effectiveNow - start) / 1000),
+    remainingSeconds: end === null ? null : Math.max(0, (end - effectiveNow) / 1000),
+    overdueSeconds: status === 'due' ? Math.max(0, (now - end) / 1000) : null,
+    progress: status === 'finished' || status === 'collected' || end === null ? 1 : Math.min(1, Math.max(0, (effectiveNow - start) / (end - start))),
+  };
+}
 export function validateRevision(n) {
   if (!Number.isSafeInteger(n) || n < 0) throw new ShareError('INVALID_REVISION');
   return n;

@@ -54,6 +54,12 @@ public class SessionEvents {
     activity.save(e);
   }
 
+  public void backdateStarted(SessionEntity s) {
+    // Keep the event identity/read status; only its actual start timestamp is corrected.
+    activity.findBySessionIdAndUserIdAndKind(s.getId(), s.getUserId(), "started")
+        .ifPresent(event -> event.setOccurredAt(s.getStartedAt()));
+  }
+
   public boolean process(SessionEntity s, ApplianceEntity a, Instant now) {
     boolean changed = false;
     if (s.isOpen() && s.getCompletedAt() != null) {

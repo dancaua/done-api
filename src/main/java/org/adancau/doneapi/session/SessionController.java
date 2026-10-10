@@ -54,6 +54,12 @@ public class SessionController {
     return service.get(UUID.fromString(jwt.getSubject()), id);
   }
 
+  @PostMapping("/sessions/{id}/backdate")
+  public SessionDtos.SessionView backdate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+      @RequestHeader("Idempotency-Key") UUID key, @Valid @RequestBody SessionDtos.BackdateSession r) {
+    return service.backdate(UUID.fromString(jwt.getSubject()), id, key, r);
+  }
+
   @PostMapping("/sessions/{id}/extend")
   public SessionDtos.SessionView extend(
       @AuthenticationPrincipal Jwt jwt,

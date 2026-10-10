@@ -1,5 +1,54 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer"><title>DONE.</title><link rel="stylesheet" href="/share.css"><script type="module" src="/share.js"></script></head>
-<body><main><header><strong>DONE<span>.</span></strong><select id="language" aria-label="Language"></select></header>
-<section id="card" aria-live="polite"><div id="art" aria-hidden="true"></div><h1 id="name"></h1><p class="badge" id="badge"></p><h2 id="status"></h2><p id="subtitle"></p><dl id="facts"></dl><p class="muted" id="updated"></p><p class="muted" id="hint"></p><button id="refresh" type="button"></button><p class="error" id="error" role="alert"></p></section>
-<footer id="footer"></footer></main></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <title>DONE.</title>
+  <link rel="stylesheet" href="/share.css">
+  <script type="module" src="/share.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <strong class="wordmark">DONE<span>.</span></strong>
+      <div class="page-controls">
+        <button id="theme" class="theme-button" type="button"></button>
+        <select id="language" aria-label="Language"></select>
+      </div>
+    </header>
+    <section id="card" class="status-card" data-state="loading" aria-labelledby="name">
+      <div class="device-heading">
+        <h1 id="name">DONE.</h1>
+        <p class="badge" id="badge"></p>
+      </div>
+      <div id="timer-panel" class="timer-panel">
+        <div class="timer-orbit">
+          <svg class="progress-ring" viewBox="0 0 240 240" aria-hidden="true">
+            <circle class="track" cx="120" cy="120" r="110"></circle>
+            <circle id="progress" class="progress" cx="120" cy="120" r="110" stroke-dasharray="691.1504" stroke-dashoffset="691.1504"></circle>
+          </svg>
+          <div class="timer-content">
+            <div id="art" aria-hidden="true"></div>
+            <p id="timer" class="timer" role="timer" aria-live="off"></p>
+            <p id="timer-label" class="timer-label"></p>
+          </div>
+        </div>
+      </div>
+      <h2 id="status"></h2>
+      <p id="subtitle" class="subtitle"></p>
+      <dl id="facts"></dl>
+    </section>
+    <div id="sync-details" class="sync-details">
+      <p id="updated"></p>
+      <p id="hint"></p>
+    </div>
+    <button id="refresh" type="button"></button>
+    <p class="error" id="error" role="alert"></p>
+    <footer id="footer"></footer>
+    <p id="announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+  </main>
+</body>
+</html>

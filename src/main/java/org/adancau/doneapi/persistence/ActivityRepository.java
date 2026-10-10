@@ -11,6 +11,8 @@ public interface ActivityRepository extends JpaRepository<ActivityEntity, UUID> 
 
   Optional<ActivityEntity> findByIdAndUserId(UUID id, UUID userId);
 
+  Optional<ActivityEntity> findBySessionIdAndUserIdAndKind(UUID sessionId, UUID userId, String kind);
+
   @Modifying
   @Query("update ActivityEntity e set e.readAt=:now where e.userId=:userId and e.readAt is null")
   int markAllRead(@Param("userId") UUID userId, @Param("now") Instant now);
