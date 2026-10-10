@@ -10,12 +10,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class DomainViews {
   private final Clock clock;
+  private final org.springframework.jdbc.core.JdbcTemplate jdbc;
   private final UserRepository users;
   private final org.adancau.doneapi.common.MessageCatalog catalog;
   private final tools.jackson.databind.json.JsonMapper json;
 
-  public DomainViews(Clock clock, UserRepository users, org.adancau.doneapi.common.MessageCatalog catalog, tools.jackson.databind.json.JsonMapper json) {
-    this.clock = clock; this.users=users; this.catalog=catalog; this.json=json;
+  public DomainViews(
+      Clock clock,
+      UserRepository users,
+      org.adancau.doneapi.common.MessageCatalog catalog,
+      tools.jackson.databind.json.JsonMapper json,
+      org.springframework.jdbc.core.JdbcTemplate jdbc) {
+    this.clock = clock;
+    this.users = users;
+    this.catalog = catalog;
+    this.json = json;
+    this.jdbc = jdbc;
   }
 
   public String status(SessionEntity s) {
@@ -47,18 +57,37 @@ public class DomainViews {
         s.getCanceledAt(),
         Math.max(0, Duration.between(s.getStartedAt(), end).toSeconds()),
         s.getVersion(),
-        clock.instant(), s.getSourceProgramId(), programSnapshot(s), measuredSnapshot(s), s.getMode(), s.isOpen());
+        clock.instant(),
+        s.getSourceProgramId(),
+        programSnapshot(s),
+        measuredSnapshot(s),
+        s.getMode(),
+        s.isOpen());
   }
 
   public ProgramSnapshot programSnapshot(SessionEntity s) {
-    return new ProgramSnapshot(s.getProgramName(), s.getMinutes(), s.getProgramLocalizationKey(), s.isProgramCustom());
+    return new ProgramSnapshot(
+        s.getProgramName(), s.getMinutes(), s.getProgramLocalizationKey(), s.isProgramCustom());
   }
+
   public ProgramSnapshot measuredSnapshot(SessionEntity s) {
-    return s.getMeasuredProgramName() == null ? null : new ProgramSnapshot(s.getMeasuredProgramName(), s.getMeasuredProgramMinutes(), null, true);
+    return s.getMeasuredProgramName() == null
+        ? null
+        : new ProgramSnapshot(
+            s.getMeasuredProgramName(), s.getMeasuredProgramMinutes(), null, true);
   }
+
   public ProgramView program(ProgramEntity p) {
-    return new ProgramView(p.getId(), p.getName(), p.getMinutes(), p.isSuggested(), p.getVersion(),
-        p.getApplianceId(), p.getLocalizationKey(), p.isCustom(), p.getPosition());
+    return new ProgramView(
+        p.getId(),
+        p.getName(),
+        p.getMinutes(),
+        p.isSuggested(),
+        p.getVersion(),
+        p.getApplianceId(),
+        p.getLocalizationKey(),
+        p.isCustom(),
+        p.getPosition());
   }
 
   public ApplianceView appliance(
@@ -77,17 +106,55 @@ public class DomainViews {
   }
 
   public ActivityView activity(ActivityEntity e) {
-    String language=users.findById(e.getUserId()).map(UserEntity::getLanguage).orElse("en");
-    java.util.List<String> arguments=e.getMessageArguments()==null ? java.util.List.of() :
-        java.util.Arrays.asList(json.readValue(e.getMessageArguments(),String[].class));
-    var program=e.getProgramSnapshot()==null ? null : json.readValue(e.getProgramSnapshot(),ProgramSnapshot.class);
-    if (program!=null && program.localizationKey()!=null && !arguments.isEmpty()) {
-      arguments=new java.util.ArrayList<>(arguments);arguments.set(0,catalog.text(language,program.localizationKey(),java.util.List.of()));
+    return activity(e, e.getUserId());
+  }
+
+  public ActivityView activity(ActivityEntity e, java.util.UUID viewer) {
+    var reads =
+        jdbc.query(
+            "select read_at from activity_reads where event_id=? and user_id=?",
+            (r, n) -> r.getTimestamp(1).toInstant(),
+            e.getId().toString(),
+            viewer.toString());
+    Instant readAt =
+        reads.isEmpty() ? (viewer.equals(e.getUserId()) ? e.getReadAt() : null) : reads.get(0);
+    String language = users.findById(viewer).map(UserEntity::getLanguage).orElse("en");
+    java.util.List<String> arguments =
+        e.getMessageArguments() == null
+            ? java.util.List.of()
+            : java.util.Arrays.asList(json.readValue(e.getMessageArguments(), String[].class));
+    var program =
+        e.getProgramSnapshot() == null
+            ? null
+            : json.readValue(e.getProgramSnapshot(), ProgramSnapshot.class);
+    if (program != null && program.localizationKey() != null && !arguments.isEmpty()) {
+      arguments = new java.util.ArrayList<>(arguments);
+      arguments.set(0, catalog.text(language, program.localizationKey(), java.util.List.of()));
     }
-    var message=e.getMessageKey()==null ? null : new org.adancau.doneapi.activity.ActivityDtos.LocalizedMessage(e.getMessageKey(),arguments);
-    return new ActivityView(e.getId(),e.getApplianceId(),e.getSessionId(),e.getKind(),
-        catalog.text(language,e.getTitleKey()==null ? e.getTitle() : e.getTitleKey(),java.util.List.of()),
-        message==null ? e.getDetail() : catalog.text(language,message.key(),message.arguments()),
-        e.getOccurredAt(),e.getReadAt(),e.getTitleKey(),message,program);
+    var message =
+        e.getMessageKey() == null
+            ? null
+            : new org.adancau.doneapi.activity.ActivityDtos.LocalizedMessage(
+                e.getKind().equals("finished") && !viewer.equals(e.getUserId())
+                    ? "home.push.completedBody"
+                    : e.getMessageKey(),
+                arguments);
+    return new ActivityView(
+        e.getId(),
+        e.getApplianceId(),
+        e.getSessionId(),
+        e.getKind(),
+        catalog.text(
+            language,
+            e.getTitleKey() == null ? e.getTitle() : e.getTitleKey(),
+            java.util.List.of()),
+        message == null
+            ? e.getDetail()
+            : catalog.text(language, message.key(), message.arguments()),
+        e.getOccurredAt(),
+        readAt,
+        e.getTitleKey(),
+        message,
+        program);
   }
 }

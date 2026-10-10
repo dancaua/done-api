@@ -11,7 +11,8 @@ public interface ActivityRepository extends JpaRepository<ActivityEntity, UUID> 
 
   Optional<ActivityEntity> findByIdAndUserId(UUID id, UUID userId);
 
-  Optional<ActivityEntity> findBySessionIdAndUserIdAndKind(UUID sessionId, UUID userId, String kind);
+  Optional<ActivityEntity> findBySessionIdAndUserIdAndKind(
+      UUID sessionId, UUID userId, String kind);
 
   @Modifying
   @Query("update ActivityEntity e set e.readAt=:now where e.userId=:userId and e.readAt is null")
@@ -35,4 +36,18 @@ public interface ActivityRepository extends JpaRepository<ActivityEntity, UUID> 
       @Param("now") Instant now);
 
   long countByUserIdAndReadAtIsNull(UUID userId);
+
+  @Query(
+      "select e from ActivityEntity e where e.applianceId in (select a.id from ApplianceEntity a"
+          + " where a.householdId in :homes) order by e.occurredAt desc,e.id desc")
+  Page<ActivityEntity> visible(@Param("homes") Collection<UUID> homes, Pageable page);
+
+  @Query(
+      value =
+          "SELECT COUNT(*) FROM activity_events e JOIN appliances a ON a.id=e.appliance_id WHERE"
+              + " a.household_id IN (:homes) AND (e.user_id<>:actor OR e.read_at IS NULL) AND NOT"
+              + " EXISTS (SELECT 1 FROM activity_reads r WHERE r.event_id=e.id AND"
+              + " r.user_id=:actor)",
+      nativeQuery = true)
+  long unreadVisible(@Param("actor") String actor, @Param("homes") Collection<String> homes);
 }

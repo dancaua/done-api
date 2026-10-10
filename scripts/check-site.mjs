@@ -17,7 +17,7 @@ for(const lang of langs){
     assert.deepEqual([...text.matchAll(/\{\d+\}/g)].map(x=>x[0]).sort(),[...copy.en[key].matchAll(/\{\d+\}/g)].map(x=>x[0]).sort(),`${lang}:${key} placeholders`);
   }
 }
-for(const file of ['site/landing-copy.js','site/landing.js','site/copy.js','site/site.js','site/recovery.js','site/recovery-copy.js','share.js','localizations.js']){
+for(const file of ['site/landing-copy.js','site/landing.js','site/copy.js','site/site.js','site/invite.js','site/recovery.js','site/recovery-copy.js','share.js','localizations.js']){
  const result=spawnSync(process.execPath,['--check',resolve(root,'src/main/resources/static',file)],{encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);
 }

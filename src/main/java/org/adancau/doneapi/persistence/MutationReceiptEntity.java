@@ -14,6 +14,7 @@ public class MutationReceiptEntity {
   @Id private UUID id = UUID.randomUUID();
   private UUID userId;
   private UUID requestId;
+  private UUID householdId;
 
   @Column(length = 64)
   private String requestHash;

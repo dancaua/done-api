@@ -153,3 +153,8 @@ Java 21 + PostgreSQL 16: **82 tests passed**, including the existing application
 
 
 MySQL verification supersedes the historical PostgreSQL results above; see the current README for the executed MySQL checks.
+
+
+## Shared households and notifications
+
+See [shared-households.md](shared-households.md) for membership permissions, JSON DTOs, migrations V2/V3, invitation links and APNs configuration. Shared-resource access is validated before cached mutation replies. APNs is disabled by default and requires an authorized private key plus the iOS Push Notifications capability.

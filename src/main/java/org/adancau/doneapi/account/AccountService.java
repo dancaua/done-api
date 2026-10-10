@@ -18,6 +18,7 @@ public class AccountService {
   private final AppleAuthService apple;
   private final UserViews views;
   private final Clock clock;
+  private final org.springframework.jdbc.core.JdbcTemplate jdbc;
   private final PasswordRecoveryService recovery;
 
   public AccountService(
@@ -27,8 +28,11 @@ public class AccountService {
       PasswordEncoder passwords,
       AppleAuthService apple,
       UserViews views,
-      Clock clock, PasswordRecoveryService recovery) {
-    this.recovery=recovery;
+      Clock clock,
+      PasswordRecoveryService recovery,
+      org.springframework.jdbc.core.JdbcTemplate jdbc) {
+    this.recovery = recovery;
+    this.jdbc = jdbc;
     this.users = users;
     this.sessions = sessions;
     this.mutations = mutations;
@@ -54,7 +58,8 @@ public class AccountService {
           if (r.displayName() == null
               && r.timezone() == null
               && r.notificationsEnabled() == null
-              && r.language() == null && r.onboarded() == null)
+              && r.language() == null
+              && r.onboarded() == null)
             throw ApiException.invalid("Trimite cel puțin o preferință.");
           if (r.timezone() != null) {
             try {
@@ -84,7 +89,7 @@ public class AccountService {
     u.setPasswordHash(passwords.encode(r.newPassword()));
     u.setRevision(u.getRevision() + 1);
     sessions.revokeAll(owner, clock.instant());
-    recovery.invalidate(owner,u.getEmail());
+    recovery.invalidate(owner, u.getEmail());
   }
 
   @Transactional
@@ -92,10 +97,12 @@ public class AccountService {
     var u = users.lockById(owner).orElseThrow(ApiException::unauthorized);
     if (r != null && r.password() != null && u.getPasswordHash() != null) {
       AuthService.validPassword(r.password());
-      if (!passwords.matches(r.password(),u.getPasswordHash())) throw ApiException.unauthorized();
-    } else apple.requireRecentApple(owner,sid);
+      if (!passwords.matches(r.password(), u.getPasswordHash())) throw ApiException.unauthorized();
+    } else apple.requireRecentApple(owner, sid);
     apple.revokeFor(owner);
-    recovery.invalidate(owner,u.getEmail());
+    recovery.invalidate(owner, u.getEmail());
+    jdbc.update("DELETE FROM appliances WHERE user_id=?", owner.toString());
+    jdbc.update("DELETE FROM households WHERE user_id=?", owner.toString());
     users.delete(u);
     users.flush();
   }

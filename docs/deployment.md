@@ -127,3 +127,19 @@ Numai pentru o schemă verificată ca echivalentă cu V1, înregistrează explic
 Baseline-ul adaugă istoricul Flyway și marchează versiunea 1 drept punct de pornire; V1 nu este reexecutată. Păstrează `baseline-on-migrate=false` și `clean-disabled=true`. Modificările următoare se livrează prin V2, V3 etc., fără editarea V1. Vezi [comanda oficială Flyway baseline](https://documentation.red-gate.com/flyway/reference/commands/baseline).
 
 Aplicat la 9 octombrie 2026 pentru `done_db` din DigitalOcean: 16 tabele, 135 de coloane, 15 CHECK-uri și 5 triggere au corespuns exact referinței V1. Backupul SQL și comparațiile au fost salvate local în `backups/flyway-baseline-20261009-144621/`, ignorat de Git. Migrarea și validarea au trecut; structura domeniului și numărul rândurilor au rămas identice înainte și după baseline. JAR-ul a pornit apoi cu configurația locală existentă și Hibernate validate; health/readiness au răspuns HTTP 200, `UP`, iar `/api/v1/public-config` a răspuns HTTP 200. Procesul temporar de verificare a fost oprit.
+
+
+## Shared households and notifications
+
+See [shared-households.md](shared-households.md) for membership permissions, JSON DTOs, migrations V2/V3, invitation links and APNs configuration. Shared-resource access is validated before cached mutation replies. APNs is disabled by default and requires an authorized private key plus the iOS Push Notifications capability.
+
+
+### Recuperare după SQL rulat manual: „Table already exists”
+
+Rularea unui fișier `V...sql` direct în clientul MySQL modifică schema fără să înregistreze migrarea în `flyway_schema_history`. La următoarea pornire, Flyway încearcă să execute aceeași migrare. Nu șterge tabelele și nu adăuga automat `IF NOT EXISTS`: acestea pot ascunde o schemă incompletă. `repair` singur elimină înregistrarea eșuată, dar nu marchează SQL-ul manual ca aplicat.
+
+Pentru o recuperare controlată, oprește instanțele API care pot migra simultan, salvează un backup și compară schema cu aceeași versiune a migrărilor aplicate într-o bază izolată: coloane, valori implicite, indexuri, relații, CHECK-uri și charset. Numai după o potrivire completă se poate elimina înregistrarea eșuată cu `repair` și înregistra versiunile manual aplicate folosind [`skipExecutingMigrations`](https://documentation.red-gate.com/fd/flyway-skip-executing-migrations-setting-277579035.html), cu `target` limitat la ultima versiune verificată. Nu păstra această opțiune în configurația aplicației: migrările viitoare trebuie executate normal. Dacă SQL-ul manual este incomplet, reconciliază structura înainte de a modifica istoricul.
+
+Recuperare efectuată la 11 octombrie 2026 pentru baza configurată `done_db`: V2 și V3 erau aplicate integral, iar istoricul conținea baseline V1 și o încercare eșuată V2. Cele șase tabele afectate au corespuns exact referinței izolate, inclusiv coloana nouă din `mutation_receipts`. Backupul complet este în `backups/manual-migration-recovery-2026-10-11T01-29-24.763284/before.sql` (local, ignorat de Git, permisiuni 0600). Au fost înregistrate numai V2 și V3, fără reexecutarea SQL-ului; validarea Flyway a trecut, iar definițiile tabelelor și numărul rândurilor din cele 21 de tabele ale domeniului au rămas identice. Procedura a fost verificată întâi într-o bază temporară, inclusiv păstrarea datelor existente. Backendul a fost construit și pornit apoi cu Flyway normal și Hibernate validate; `/actuator/health/readiness` și `/api/v1/public-config` au răspuns HTTP 200. Instanța temporară de verificare a fost oprită.
+
+Pe viitor, folosește exclusiv pornirea aplicației sau `./scripts/migrate.sh`, apoi `./scripts/migrate.sh validate` / `./scripts/migrate.sh info`, cu aceeași configurație de conexiune ca aplicația.

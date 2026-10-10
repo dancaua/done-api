@@ -7,11 +7,20 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SessionEvents {
+  private final org.adancau.doneapi.household.HouseholdAccess access;
   private final ActivityRepository activity;
+  private final org.adancau.doneapi.push.PushService push;
   private final tools.jackson.databind.json.JsonMapper json;
 
-  public SessionEvents(ActivityRepository activity, tools.jackson.databind.json.JsonMapper json) {
-    this.activity = activity; this.json=json;
+  public SessionEvents(
+      ActivityRepository activity,
+      tools.jackson.databind.json.JsonMapper json,
+      org.adancau.doneapi.push.PushService push,
+      org.adancau.doneapi.household.HouseholdAccess access) {
+    this.activity = activity;
+    this.json = json;
+    this.push = push;
+    this.access = access;
   }
 
   public void event(
@@ -24,39 +33,67 @@ public class SessionEvents {
     e.setKind(kind);
     e.setTitle(title);
     e.setDetail(detail);
-    String titleKey=switch(kind) {
-      case "started" -> "Timer pornit.";
-      case "finished" -> switch(a.getKind()) {
-        case washer -> "Rufele sunt gata!"; case dryer -> "Rufele sunt uscate!";
-        case dishwasher -> "Vasele sunt curate!"; default -> "Sesiune încheiată!"; };
-      case "halfway" -> title.equals("Mai sunt 5 minute.") ? "La jumătate — încă 5 minute." : "Suntem la jumătate!";
-      case "five_minutes" -> "Încă 5 minute."; case "due" -> "E timpul să verifici.";
-      case "reminder30" -> "Psst…"; case "reminder120" -> "Încă te așteaptă…";
-      default -> "Oprită";
-    };
-    String messageKey=switch(kind) {
-      case "started" -> s.getMode()==TimerMode.stopwatch ? "{0} · Cronometru" : "{0} · {1} min";
-      case "finished" -> "{0} · Finalizare confirmată de tine.";
-      case "halfway" -> "{0}: jumătate din durata programului a trecut.";
-      case "five_minutes" -> "{0}: programul ar trebui să fie gata în curând.";
-      case "due" -> "{0}: durata estimată a trecut.";
-      case "reminder30" -> "{0} te așteaptă de 30 de minute.";
-      case "reminder120" -> "{0}: au trecut două ore de la finalizare.";
-      default -> "{0}";
-    };
-    e.setTitleKey(titleKey); e.setMessageKey(messageKey);
-    java.util.List<String> arguments=kind.equals("started") ?
-        (s.getMode()==TimerMode.stopwatch ? List.of(s.getProgramName()) : List.of(s.getProgramName(),String.valueOf(s.getMinutes()))) : List.of(a.getName());
+    String titleKey =
+        switch (kind) {
+          case "started" -> "Timer pornit.";
+          case "finished" ->
+              switch (a.getKind()) {
+                case washer -> "Rufele sunt gata!";
+                case dryer -> "Rufele sunt uscate!";
+                case dishwasher -> "Vasele sunt curate!";
+                default -> "Sesiune încheiată!";
+              };
+          case "halfway" ->
+              title.equals("Mai sunt 5 minute.")
+                  ? "La jumătate — încă 5 minute."
+                  : "Suntem la jumătate!";
+          case "five_minutes" -> "Încă 5 minute.";
+          case "due" -> "E timpul să verifici.";
+          case "reminder30" -> "Psst…";
+          case "reminder120" -> "Încă te așteaptă…";
+          default -> "Oprită";
+        };
+    String messageKey =
+        switch (kind) {
+          case "started" ->
+              s.getMode() == TimerMode.stopwatch ? "{0} · Cronometru" : "{0} · {1} min";
+          case "finished" ->
+              access.participants(a.getHouseholdId()).size() > 1
+                  ? "home.push.completedBody"
+                  : "{0} · Finalizare confirmată de tine.";
+          case "halfway" -> "{0}: jumătate din durata programului a trecut.";
+          case "five_minutes" -> "{0}: programul ar trebui să fie gata în curând.";
+          case "due" -> "{0}: durata estimată a trecut.";
+          case "reminder30" -> "{0} te așteaptă de 30 de minute.";
+          case "reminder120" -> "{0}: au trecut două ore de la finalizare.";
+          default -> "{0}";
+        };
+    e.setTitleKey(titleKey);
+    e.setMessageKey(messageKey);
+    java.util.List<String> arguments =
+        kind.equals("started")
+            ? (s.getMode() == TimerMode.stopwatch
+                ? List.of(s.getProgramName())
+                : List.of(s.getProgramName(), String.valueOf(s.getMinutes())))
+            : List.of(a.getName());
     e.setMessageArguments(json.writeValueAsString(arguments));
-    if (kind.equals("started")) e.setProgramSnapshot(json.writeValueAsString(
-        new org.adancau.doneapi.appliance.ApplianceDtos.ProgramSnapshot(s.getProgramName(),s.getMinutes(),s.getProgramLocalizationKey(),s.isProgramCustom())));
+    if (kind.equals("started"))
+      e.setProgramSnapshot(
+          json.writeValueAsString(
+              new org.adancau.doneapi.appliance.ApplianceDtos.ProgramSnapshot(
+                  s.getProgramName(),
+                  s.getMinutes(),
+                  s.getProgramLocalizationKey(),
+                  s.isProgramCustom())));
     e.setOccurredAt(at);
     activity.save(e);
+    push.event(s, a, kind);
   }
 
   public void backdateStarted(SessionEntity s) {
     // Keep the event identity/read status; only its actual start timestamp is corrected.
-    activity.findBySessionIdAndUserIdAndKind(s.getId(), s.getUserId(), "started")
+    activity
+        .findBySessionIdAndUserIdAndKind(s.getId(), s.getUserId(), "started")
         .ifPresent(event -> event.setOccurredAt(s.getStartedAt()));
   }
 

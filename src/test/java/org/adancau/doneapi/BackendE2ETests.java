@@ -41,12 +41,12 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(BackendE2ETests.TestTime.class)
 class BackendE2ETests {
   private static MySQLContainer mysql;
-  private static final TestSmtpServer smtp=new TestSmtpServer();
+  private static final TestSmtpServer smtp = new TestSmtpServer();
 
   @DynamicPropertySource
   static void database(DynamicPropertyRegistry p) {
-    p.add("spring.mail.host",() -> "localhost");
-    p.add("spring.mail.port",smtp::port);
+    p.add("spring.mail.host", () -> "localhost");
+    p.add("spring.mail.port", smtp::port);
     String external = System.getenv("TEST_DATABASE_URL");
     if (external != null && !external.isBlank()) {
       p.add("spring.datasource.url", () -> external);
@@ -57,7 +57,13 @@ class BackendE2ETests {
           "spring.datasource.password",
           () -> System.getenv().getOrDefault("TEST_DATABASE_PASSWORD", ""));
     } else {
-      if (mysql==null) { mysql = new MySQLContainer("mysql:8.4").withDatabaseName("done_db").withCommand("--log-bin-trust-function-creators=ON"); mysql.start(); }
+      if (mysql == null) {
+        mysql =
+            new MySQLContainer("mysql:8.4")
+                .withDatabaseName("done_db")
+                .withCommand("--log-bin-trust-function-creators=ON");
+        mysql.start();
+      }
       p.add("spring.datasource.url", mysql::getJdbcUrl);
       p.add("spring.datasource.username", mysql::getUsername);
       p.add("spring.datasource.password", mysql::getPassword);
@@ -103,6 +109,8 @@ class BackendE2ETests {
   @Autowired PasswordRecoveryService recovery;
   @Autowired org.springframework.security.oauth2.jwt.JwtEncoder jwtEncoder;
   @MockitoBean AppleGateway apple;
+  @MockitoBean org.adancau.doneapi.push.PushGateway push;
+  @Autowired org.adancau.doneapi.push.PushService pushes;
 
   @Autowired
   @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping")
@@ -118,11 +126,22 @@ class BackendE2ETests {
   @BeforeEach
   void resetState() {
     // DELETE with FK checks enabled verifies the same cascades as account/appliance deletion.
-    for(String table:List.of("session_shares","activity_events","appliance_sessions","programs","appliances","households","app_users","apple_challenges","auth_rate_buckets","recovery_mail_queue"))
-      jdbc.update("DELETE FROM "+table);
+    for (String table :
+        List.of(
+            "session_shares",
+            "activity_events",
+            "appliance_sessions",
+            "programs",
+            "appliances",
+            "households",
+            "app_users",
+            "apple_challenges",
+            "auth_rate_buckets",
+            "recovery_mail_queue")) jdbc.update("DELETE FROM " + table);
     clock.now = Instant.parse("2026-10-05T12:00:00Z");
-    reset(apple);
-    smtp.messages.clear();smtp.rejectNext=false;
+    reset(apple, push);
+    smtp.messages.clear();
+    smtp.rejectNext = false;
   }
 
   Response call(String method, String path, Object body, String token, String key) {
@@ -974,29 +993,69 @@ class BackendE2ETests {
 
   @Test
   void mysqlRateLimitUpsertIsAtomicAcrossConcurrentRequests() throws Exception {
-    try(var pool=Executors.newFixedThreadPool(8)) {
-      var start=new CountDownLatch(1);
-      var attempts=new ArrayList<Future<Boolean>>();
-      for(int i=0;i<16;i++)attempts.add(pool.submit(() -> { start.await();return rates.consume("mysql-concurrency",5); }));
-      start.countDown();int allowed=0;
-      for(var attempt:attempts)if(attempt.get(10,TimeUnit.SECONDS))allowed++;
-      assertEquals(5,allowed);
+    try (var pool = Executors.newFixedThreadPool(8)) {
+      var start = new CountDownLatch(1);
+      var attempts = new ArrayList<Future<Boolean>>();
+      for (int i = 0; i < 16; i++)
+        attempts.add(
+            pool.submit(
+                () -> {
+                  start.await();
+                  return rates.consume("mysql-concurrency", 5);
+                }));
+      start.countDown();
+      int allowed = 0;
+      for (var attempt : attempts) if (attempt.get(10, TimeUnit.SECONDS)) allowed++;
+      assertEquals(5, allowed);
     }
-    clock.advance(301);assertTrue(rates.consume("mysql-concurrency",5));
+    clock.advance(301);
+    assertTrue(rates.consume("mysql-concurrency", 5));
   }
 
   @Test
   void mysqlProgramOwnershipAndOpenSessionConstraintsApplyOutsideJpa() {
-    var one=user();var two=user();var a=device(one,"washer");var b=device(two,"washer");
-    var session=expect(201,"POST","/appliances/"+a.get("id").asText()+"/sessions",Map.of("programId",a.get("programs").get(0).get("id").asText()),one.token(),key());
-    assertThrows(org.springframework.dao.DataIntegrityViolationException.class,() -> jdbc.update(
-        "UPDATE appliance_sessions SET program_id=? WHERE id=?",b.get("programs").get(0).get("id").asText(),session.get("id").asText()));
-    assertThrows(org.springframework.dao.DataIntegrityViolationException.class,() -> jdbc.update(
-        "INSERT INTO appliance_sessions(id,user_id,appliance_id,program_name,minutes,mode,started_at) VALUES (?,?,?,'Second',0,'stopwatch',?)",
-        UUID.randomUUID(),one.id(),a.get("id").asText(),org.adancau.doneapi.common.DatabaseTime.at(clock.instant())));
-    jdbc.update("DELETE FROM programs WHERE id=?",a.get("programs").get(0).get("id").asText());
-    assertNull(jdbc.queryForObject("SELECT program_id FROM appliance_sessions WHERE id=?",String.class,session.get("id").asText()));
-    assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM appliance_sessions WHERE id=?",Integer.class,session.get("id").asText()));
+    var one = user();
+    var two = user();
+    var a = device(one, "washer");
+    var b = device(two, "washer");
+    var session =
+        expect(
+            201,
+            "POST",
+            "/appliances/" + a.get("id").asText() + "/sessions",
+            Map.of("programId", a.get("programs").get(0).get("id").asText()),
+            one.token(),
+            key());
+    assertThrows(
+        org.springframework.dao.DataIntegrityViolationException.class,
+        () ->
+            jdbc.update(
+                "UPDATE appliance_sessions SET program_id=? WHERE id=?",
+                b.get("programs").get(0).get("id").asText(),
+                session.get("id").asText()));
+    assertThrows(
+        org.springframework.dao.DataIntegrityViolationException.class,
+        () ->
+            jdbc.update(
+                "INSERT INTO"
+                    + " appliance_sessions(id,user_id,appliance_id,program_name,minutes,mode,started_at)"
+                    + " VALUES (?,?,?,'Second',0,'stopwatch',?)",
+                UUID.randomUUID(),
+                one.id(),
+                a.get("id").asText(),
+                org.adancau.doneapi.common.DatabaseTime.at(clock.instant())));
+    jdbc.update("DELETE FROM programs WHERE id=?", a.get("programs").get(0).get("id").asText());
+    assertNull(
+        jdbc.queryForObject(
+            "SELECT program_id FROM appliance_sessions WHERE id=?",
+            String.class,
+            session.get("id").asText()));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM appliance_sessions WHERE id=?",
+            Integer.class,
+            session.get("id").asText()));
   }
 
   @Test
@@ -1126,57 +1185,118 @@ class BackendE2ETests {
 
   @Test
   void backdatedStopwatchSynchronizesHistoryLearnsFullDurationAndRetriesOnlyOnce() {
-    var u = user(); var a = device(u, "washer");
+    var u = user();
+    var a = device(u, "washer");
     String aid = a.get("id").asText();
     var initial = clock.instant();
     String startKey = key();
     var payload = Map.of("mode", "stopwatch", "elapsedMinutes", 5);
     var s = expect(201, "POST", "/appliances/" + aid + "/sessions", payload, u.token(), startKey);
-    String id = s.get("id").asText(); String path = "/sessions/" + id + "/backdate";
+    String id = s.get("id").asText();
+    String path = "/sessions/" + id + "/backdate";
     assertEquals(initial.minusSeconds(300).toString(), s.get("startedAt").asText());
-    assertEquals(300, s.get("elapsedSeconds").asLong()); assertTrue(s.get("expectedEnd").isNull());
+    assertEquals(300, s.get("elapsedSeconds").asLong());
+    assertTrue(s.get("expectedEnd").isNull());
     clock.advance(30);
-    assertEquals(id, expect(201, "POST", "/appliances/" + aid + "/sessions", payload, u.token(), startKey).get("id").asText());
+    assertEquals(
+        id,
+        expect(201, "POST", "/appliances/" + aid + "/sessions", payload, u.token(), startKey)
+            .get("id")
+            .asText());
     String correctionKey = key();
     var updated = expect(200, "POST", path, Map.of("minutes", 7), u.token(), correctionKey);
     assertEquals(initial.minusSeconds(720).toString(), updated.get("startedAt").asText());
     assertEquals(750, updated.get("elapsedSeconds").asLong());
     expect(200, "POST", path, Map.of("minutes", 7), u.token(), correctionKey);
     expect(409, "POST", path, Map.of("minutes", 8), u.token(), correctionKey);
-    assertEquals(updated.get("startedAt"), expect(200, "GET", "/sessions/" + id, null, u.token(), null).get("startedAt"));
+    assertEquals(
+        updated.get("startedAt"),
+        expect(200, "GET", "/sessions/" + id, null, u.token(), null).get("startedAt"));
     var history = expect(200, "GET", "/appliances/" + aid + "/sessions", null, u.token(), null);
     assertEquals(updated.get("startedAt"), history.get("items").get(0).get("startedAt"));
-    assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM activity_events WHERE session_id=? AND kind='started'", Integer.class, id));
-    assertEquals(org.adancau.doneapi.common.DatabaseTime.at(initial.minusSeconds(720)),
-        jdbc.queryForObject("SELECT occurred_at FROM activity_events WHERE session_id=? AND kind='started'", java.time.LocalDateTime.class, id));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM activity_events WHERE session_id=? AND kind='started'",
+            Integer.class,
+            id));
+    assertEquals(
+        org.adancau.doneapi.common.DatabaseTime.at(initial.minusSeconds(720)),
+        jdbc.queryForObject(
+            "SELECT occurred_at FROM activity_events WHERE session_id=? AND kind='started'",
+            java.time.LocalDateTime.class,
+            id));
     clock.advance(30);
     var done = expect(200, "POST", "/sessions/" + id + "/complete", null, u.token(), key());
     assertEquals(780, done.get("elapsedSeconds").asLong());
-    var learned = expect(200, "POST", "/sessions/" + id + "/measured-program", Map.of("name", "Measured"), u.token(), key());
+    var learned =
+        expect(
+            200,
+            "POST",
+            "/sessions/" + id + "/measured-program",
+            Map.of("name", "Measured"),
+            u.token(),
+            key());
     assertEquals(13, learned.get("measuredProgram").get("minutes").asInt());
     expect(409, "POST", path, Map.of("minutes", 5), u.token(), key());
   }
 
   @Test
   void backdatingRequiresAuthenticationOwnershipValidMinutesAndRunningStopwatch() {
-    var u = user(); var other = user(); var a = device(u, "hob");
+    var u = user();
+    var other = user();
+    var a = device(u, "hob");
     String aid = a.get("id").asText();
-    expect(400, "POST", "/appliances/" + aid + "/sessions", Map.of("mode", "countdown", "programId", a.get("programs").get(0).get("id").asText(), "elapsedMinutes", 5), u.token(), key());
-    for (int minutes : new int[]{-1, 1441})
-      expect(400, "POST", "/appliances/" + aid + "/sessions", Map.of("mode", "stopwatch", "elapsedMinutes", minutes), u.token(), key());
-    var countdown = start(u, a, "Test", 30); String cid = countdown.get("id").asText();
+    expect(
+        400,
+        "POST",
+        "/appliances/" + aid + "/sessions",
+        Map.of(
+            "mode",
+            "countdown",
+            "programId",
+            a.get("programs").get(0).get("id").asText(),
+            "elapsedMinutes",
+            5),
+        u.token(),
+        key());
+    for (int minutes : new int[] {-1, 1441})
+      expect(
+          400,
+          "POST",
+          "/appliances/" + aid + "/sessions",
+          Map.of("mode", "stopwatch", "elapsedMinutes", minutes),
+          u.token(),
+          key());
+    var countdown = start(u, a, "Test", 30);
+    String cid = countdown.get("id").asText();
     expect(400, "POST", "/sessions/" + cid + "/backdate", Map.of("minutes", 5), u.token(), key());
     expect(200, "POST", "/sessions/" + cid + "/cancel", null, u.token(), key());
-    var s = expect(201, "POST", "/appliances/" + aid + "/sessions", Map.of("mode", "stopwatch", "elapsedMinutes", 1440), u.token(), key());
-    String id = s.get("id").asText(); String path = "/sessions/" + id + "/backdate";
+    var s =
+        expect(
+            201,
+            "POST",
+            "/appliances/" + aid + "/sessions",
+            Map.of("mode", "stopwatch", "elapsedMinutes", 1440),
+            u.token(),
+            key());
+    String id = s.get("id").asText();
+    String path = "/sessions/" + id + "/backdate";
     assertEquals(86400, s.get("elapsedSeconds").asLong());
     expect(401, "POST", path, Map.of("minutes", 5), null, key());
     expect(404, "POST", path, Map.of("minutes", 5), other.token(), key());
-    for (int minutes : new int[]{-1, 0, 1441}) expect(400, "POST", path, Map.of("minutes", minutes), u.token(), key());
+    for (int minutes : new int[] {-1, 0, 1441})
+      expect(400, "POST", path, Map.of("minutes", minutes), u.token(), key());
     expect(400, "POST", path, Map.of(), u.token(), key());
     expect(200, "POST", "/sessions/" + id + "/cancel", null, u.token(), key());
     expect(409, "POST", path, Map.of("minutes", 5), u.token(), key());
-    expect(201, "POST", "/appliances/" + aid + "/sessions", Map.of("mode", "stopwatch"), u.token(), key());
+    expect(
+        201,
+        "POST",
+        "/appliances/" + aid + "/sessions",
+        Map.of("mode", "stopwatch"),
+        u.token(),
+        key());
     expect(409, "POST", path, Map.of("minutes", 5), u.token(), key());
   }
 
@@ -1202,7 +1322,9 @@ class BackendE2ETests {
             org.adancau.doneapi.activity.ActivityDtos.class,
             org.adancau.doneapi.sync.StateDtos.class,
             org.adancau.doneapi.household.HouseholdDtos.class,
-            org.adancau.doneapi.sync.StatisticsService.class, org.adancau.doneapi.sharing.SharingDtos.class)) {
+            org.adancau.doneapi.household.CollaborationDtos.class,
+            org.adancau.doneapi.sync.StatisticsService.class,
+            org.adancau.doneapi.sharing.SharingDtos.class)) {
       for (Class<?> dto : group.getDeclaredClasses()) {
         if (!dto.isRecord()) continue;
         var props =
@@ -1432,10 +1554,21 @@ class BackendE2ETests {
 
   @Test
   void mysqlBaselineHasAppliedAndKeepsUtf8mb4EvenWithLegacyDatabaseDefaults() {
-    assertEquals("1",jdbc.queryForObject("SELECT version FROM flyway_schema_history WHERE success=1 AND version IS NOT NULL ORDER BY installed_rank DESC LIMIT 1",String.class));
-    assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME<>'flyway_schema_history' AND TABLE_COLLATION NOT LIKE 'utf8mb4%'",Integer.class));
-    assertEquals("+00:00",jdbc.queryForObject("SELECT @@session.time_zone",String.class));
-    assertEquals("READ-COMMITTED",jdbc.queryForObject("SELECT @@transaction_isolation",String.class));
+    assertEquals(
+        "3",
+        jdbc.queryForObject(
+            "SELECT version FROM flyway_schema_history WHERE success=1 AND version IS NOT NULL"
+                + " ORDER BY installed_rank DESC LIMIT 1",
+            String.class));
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND"
+                + " TABLE_NAME<>'flyway_schema_history' AND TABLE_COLLATION NOT LIKE 'utf8mb4%'",
+            Integer.class));
+    assertEquals("+00:00", jdbc.queryForObject("SELECT @@session.time_zone", String.class));
+    assertEquals(
+        "READ-COMMITTED", jdbc.queryForObject("SELECT @@transaction_isolation", String.class));
   }
 
   @Test
@@ -1608,7 +1741,8 @@ class BackendE2ETests {
             UUID.fromString(u.id()),
             UUID.fromString(mutation)));
     jdbc.update(
-        "UPDATE mutation_receipts SET response_json=JSON_REMOVE(response_json, '$.notificationsEnabled') WHERE user_id=? AND request_id=?",
+        "UPDATE mutation_receipts SET response_json=JSON_REMOVE(response_json,"
+            + " '$.notificationsEnabled') WHERE user_id=? AND request_id=?",
         UUID.fromString(u.id()),
         UUID.fromString(mutation));
     var retry = expect(201, "POST", "/appliances", request, u.token(), mutation);
@@ -1618,361 +1752,1377 @@ class BackendE2ETests {
     assertTrue(fresh.get("notificationsEnabled").asBoolean());
     assertEquals(1, expect(200, "GET", "/appliances", null, u.token(), null).size());
   }
-  Response raw(String method,String path,Object body,String bearer) {
+
+  Response raw(String method, String path, Object body, String bearer) {
     try {
-      var builder=HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+path)).timeout(Duration.ofSeconds(20));
-      if(bearer!=null)builder.header("Authorization","Bearer "+bearer);
-      builder.header("Content-Type","application/json");
-      builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
-      var response=http.send(builder.build(),HttpResponse.BodyHandlers.ofString());
-      return new Response(response.statusCode(),response.body().isBlank()?json.createObjectNode():json.readTree(response.body()));
-    }catch(Exception e){throw new AssertionError(e);}
+      var builder =
+          HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+              .timeout(Duration.ofSeconds(20));
+      if (bearer != null) builder.header("Authorization", "Bearer " + bearer);
+      builder.header("Content-Type", "application/json");
+      builder.method(
+          method,
+          body == null
+              ? HttpRequest.BodyPublishers.noBody()
+              : HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
+      var response = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+      return new Response(
+          response.statusCode(),
+          response.body().isBlank() ? json.createObjectNode() : json.readTree(response.body()));
+    } catch (Exception e) {
+      throw new AssertionError(e);
+    }
   }
-  String publicPath(JsonNode share) { return URI.create(share.get("shareUrl").asText()).getPath().replace("/share/","/api/shares/"); }
-  Map<String,Object> localSnapshot() {
-    var result=new LinkedHashMap<String,Object>();
-    result.put("schemaVersion",1);result.put("id",UUID.randomUUID());result.put("applianceName","My 家 {0}");result.put("kind","custom");
-    result.put("program",Map.of("name","Literal {0} 家","minutes",30,"isCustom",true));result.put("timingMode","countdown");
-    result.put("startedAt",clock.instant().toString());result.put("expectedEnd",clock.instant().plusSeconds(1800).toString());result.put("capturedAt",clock.instant().toString());result.put("language","ja");return result;
+
+  String publicPath(JsonNode share) {
+    return URI.create(share.get("shareUrl").asText()).getPath().replace("/share/", "/api/shares/");
+  }
+
+  Map<String, Object> localSnapshot() {
+    var result = new LinkedHashMap<String, Object>();
+    result.put("schemaVersion", 1);
+    result.put("id", UUID.randomUUID());
+    result.put("applianceName", "My 家 {0}");
+    result.put("kind", "custom");
+    result.put("program", Map.of("name", "Literal {0} 家", "minutes", 30, "isCustom", true));
+    result.put("timingMode", "countdown");
+    result.put("startedAt", clock.instant().toString());
+    result.put("expectedEnd", clock.instant().plusSeconds(1800).toString());
+    result.put("capturedAt", clock.instant().toString());
+    result.put("language", "ja");
+    return result;
   }
 
   @Test
   void everyFrontendKindSupportsMeasurementAndCorrectCollectionSemantics() {
-    var u=user();
-    for(String kind:List.of("washer","dryer","dishwasher","oven","hob","custom")) {
-      var d=expect(201,"POST","/appliances",Map.of("kind",kind,"name","Device "+kind),u.token(),key());
+    var u = user();
+    for (String kind : List.of("washer", "dryer", "dishwasher", "oven", "hob", "custom")) {
+      var d =
+          expect(
+              201,
+              "POST",
+              "/appliances",
+              Map.of("kind", kind, "name", "Device " + kind),
+              u.token(),
+              key());
       assertTrue(d.get("notificationsEnabled").asBoolean());
-      assertEquals(kind.equals("custom")?0:3,d.get("programs").size());
-      var session=expect(201,"POST","/appliances/"+d.get("id").asText()+"/sessions",Map.of("timingMode","stopwatch"),u.token(),key());
-      assertEquals("timer.session",session.get("programSnapshot").get("localizationKey").asText());assertTrue(session.get("expectedEnd").isNull());
-      clock.advance(63);var done=action(u,session,"complete");assertEquals(63,done.get("elapsedSeconds").asLong());
-      boolean collect=List.of("washer","dryer","dishwasher").contains(kind);assertEquals(collect,done.get("collectedAt").isNull());
-      var measured=expect(200,"POST","/sessions/"+session.get("id").asText()+"/measured-program",Map.of("name","Measured 家"),u.token(),key());
-      assertEquals(2,measured.get("measuredProgram").get("minutes").asInt());assertEquals(0,measured.get("programSnapshot").get("minutes").asInt());
-      assertEquals(done.get("completedAt"),measured.get("completedAt"));assertEquals(done.get("collectedAt"),measured.get("collectedAt"));
-      if(collect)action(u,session,"collect");
+      assertEquals(kind.equals("custom") ? 0 : 3, d.get("programs").size());
+      var session =
+          expect(
+              201,
+              "POST",
+              "/appliances/" + d.get("id").asText() + "/sessions",
+              Map.of("timingMode", "stopwatch"),
+              u.token(),
+              key());
+      assertEquals("timer.session", session.get("programSnapshot").get("localizationKey").asText());
+      assertTrue(session.get("expectedEnd").isNull());
+      clock.advance(63);
+      var done = action(u, session, "complete");
+      assertEquals(63, done.get("elapsedSeconds").asLong());
+      boolean collect = List.of("washer", "dryer", "dishwasher").contains(kind);
+      assertEquals(collect, done.get("collectedAt").isNull());
+      var measured =
+          expect(
+              200,
+              "POST",
+              "/sessions/" + session.get("id").asText() + "/measured-program",
+              Map.of("name", "Measured 家"),
+              u.token(),
+              key());
+      assertEquals(2, measured.get("measuredProgram").get("minutes").asInt());
+      assertEquals(0, measured.get("programSnapshot").get("minutes").asInt());
+      assertEquals(done.get("completedAt"), measured.get("completedAt"));
+      assertEquals(done.get("collectedAt"), measured.get("collectedAt"));
+      if (collect) action(u, session, "collect");
     }
-    expect(400,"POST","/appliances",Map.of("kind","custom"),u.token(),key());
-    expect(400,"POST","/appliances",Map.of("kind","custom","name","  "),u.token(),key());
+    expect(400, "POST", "/appliances", Map.of("kind", "custom"), u.token(), key());
+    expect(400, "POST", "/appliances", Map.of("kind", "custom", "name", "  "), u.token(), key());
   }
 
   @Test
   void measuredSaveIsImmutableAndDoesNotResurrectDeletedProgram() {
-    var u=user();var d=device(u,"oven");String appliance=d.get("id").asText();
-    var s=expect(201,"POST","/appliances/"+appliance+"/sessions",Map.of("mode","stopwatch","program",Map.of("name","Bake","minutes",0)),u.token(),key());
-    String path="/sessions/"+s.get("id").asText()+"/measured-program";
-    expect(409,"POST",path,Map.of("name","Measured"),u.token(),key());clock.advance(61);action(u,s,"complete");
-    String command=key();var saved=expect(200,"POST",path,Map.of("name","Measured"),u.token(),command);
-    assertEquals(saved,expect(200,"POST",path,Map.of("name","Measured"),u.token(),command));
-    var device=expect(200,"GET","/appliances/"+appliance,null,u.token(),null);
-    var program=device.get("programs").valueStream().filter(p -> p.get("name").asText().equals("Measured")).findFirst().orElseThrow();
-    expect(200,"DELETE","/appliances/"+appliance+"/programs/"+program.get("id").asText(),null,u.token(),key());
-    expect(200,"POST",path,Map.of("name","Measured"),u.token(),key());
-    assertEquals(3,expect(200,"GET","/appliances/"+appliance,null,u.token(),null).get("programs").size());
-    expect(409,"POST",path,Map.of("name","Other"),u.token(),key());
-    var repeated=expect(201,"POST","/sessions/"+s.get("id").asText()+"/repeat",null,u.token(),key());
-    assertNotEquals(s.get("id"),repeated.get("id"));assertEquals("countdown",repeated.get("timingMode").asText());assertEquals(2,repeated.get("minutes").asInt());
-    var other=user();expect(404,"POST","/sessions/"+s.get("id").asText()+"/repeat",null,other.token(),key());
+    var u = user();
+    var d = device(u, "oven");
+    String appliance = d.get("id").asText();
+    var s =
+        expect(
+            201,
+            "POST",
+            "/appliances/" + appliance + "/sessions",
+            Map.of("mode", "stopwatch", "program", Map.of("name", "Bake", "minutes", 0)),
+            u.token(),
+            key());
+    String path = "/sessions/" + s.get("id").asText() + "/measured-program";
+    expect(409, "POST", path, Map.of("name", "Measured"), u.token(), key());
+    clock.advance(61);
+    action(u, s, "complete");
+    String command = key();
+    var saved = expect(200, "POST", path, Map.of("name", "Measured"), u.token(), command);
+    assertEquals(saved, expect(200, "POST", path, Map.of("name", "Measured"), u.token(), command));
+    var device = expect(200, "GET", "/appliances/" + appliance, null, u.token(), null);
+    var program =
+        device
+            .get("programs")
+            .valueStream()
+            .filter(p -> p.get("name").asText().equals("Measured"))
+            .findFirst()
+            .orElseThrow();
+    expect(
+        200,
+        "DELETE",
+        "/appliances/" + appliance + "/programs/" + program.get("id").asText(),
+        null,
+        u.token(),
+        key());
+    expect(200, "POST", path, Map.of("name", "Measured"), u.token(), key());
+    assertEquals(
+        3,
+        expect(200, "GET", "/appliances/" + appliance, null, u.token(), null)
+            .get("programs")
+            .size());
+    expect(409, "POST", path, Map.of("name", "Other"), u.token(), key());
+    var repeated =
+        expect(
+            201, "POST", "/sessions/" + s.get("id").asText() + "/repeat", null, u.token(), key());
+    assertNotEquals(s.get("id"), repeated.get("id"));
+    assertEquals("countdown", repeated.get("timingMode").asText());
+    assertEquals(2, repeated.get("minutes").asInt());
+    var other = user();
+    expect(
+        404, "POST", "/sessions/" + s.get("id").asText() + "/repeat", null, other.token(), key());
   }
 
   @Test
   void countdownOverrideAndDeletedPresetKeepTranslatedHistoricalSnapshot() {
-    var u=user();var d=device(u,"washer");String appliance=d.get("id").asText(),original=d.get("programs").get(0).get("id").asText();
-    var s=expect(201,"POST","/appliances/"+appliance+"/sessions",Map.of("programId",original,"minutes",17),u.token(),key());
-    assertEquals(17,s.get("programSnapshot").get("minutes").asInt());assertEquals("Bumbac 40°C",s.get("programSnapshot").get("localizationKey").asText());
-    assertEquals(original,s.get("sourceProgramId").asText());
-    expect(200,"DELETE","/appliances/"+appliance+"/programs/"+s.get("programId").asText(),null,u.token(),key());
-    var historical=expect(200,"GET","/sessions/"+s.get("id").asText(),null,u.token(),null);
-    assertTrue(historical.get("programId").isNull());assertEquals(s.get("programSnapshot"),historical.get("programSnapshot"));
-    var events=expect(200,"GET","/activity",null,u.token(),null).get("items");
-    assertEquals("Cotton 40°C",events.get(0).get("message").get("arguments").get(0).asText());
-    expect(200,"PATCH","/me",Map.of("language","ja"),u.token(),key());
-    assertEquals("綿40°C",expect(200,"GET","/activity",null,u.token(),null).get("items").get(0).get("message").get("arguments").get(0).asText());
+    var u = user();
+    var d = device(u, "washer");
+    String appliance = d.get("id").asText(), original = d.get("programs").get(0).get("id").asText();
+    var s =
+        expect(
+            201,
+            "POST",
+            "/appliances/" + appliance + "/sessions",
+            Map.of("programId", original, "minutes", 17),
+            u.token(),
+            key());
+    assertEquals(17, s.get("programSnapshot").get("minutes").asInt());
+    assertEquals("Bumbac 40°C", s.get("programSnapshot").get("localizationKey").asText());
+    assertEquals(original, s.get("sourceProgramId").asText());
+    expect(
+        200,
+        "DELETE",
+        "/appliances/" + appliance + "/programs/" + s.get("programId").asText(),
+        null,
+        u.token(),
+        key());
+    var historical = expect(200, "GET", "/sessions/" + s.get("id").asText(), null, u.token(), null);
+    assertTrue(historical.get("programId").isNull());
+    assertEquals(s.get("programSnapshot"), historical.get("programSnapshot"));
+    var events = expect(200, "GET", "/activity", null, u.token(), null).get("items");
+    assertEquals("Cotton 40°C", events.get(0).get("message").get("arguments").get(0).asText());
+    expect(200, "PATCH", "/me", Map.of("language", "ja"), u.token(), key());
+    assertEquals(
+        "綿40°C",
+        expect(200, "GET", "/activity", null, u.token(), null)
+            .get("items")
+            .get(0)
+            .get("message")
+            .get("arguments")
+            .get(0)
+            .asText());
   }
 
   @Test
   void visibleCharacterLimitsAndOnboardingMirrorFrontend() {
-    var u=user();String emoji="🧑‍🔧";
-    expect(201,"POST","/appliances",Map.of("kind","custom","name",emoji.repeat(40)),u.token(),key());
-    expect(400,"POST","/appliances",Map.of("kind","custom","name",emoji.repeat(41)),u.token(),key());
-    var profile=expect(200,"PATCH","/me",Map.of("displayName","","onboarded",true),u.token(),key());
-    assertEquals("",profile.get("displayName").asText());assertTrue(profile.get("onboarded").asBoolean());
-    expect(400,"PATCH","/me",Map.of("displayName",emoji.repeat(41)),u.token(),key());
-    for(String language:List.of("en","ro","es","it","fr","de","pl","hi","ja"))assertEquals(200,raw("GET","/api/v1/localizations/"+language,null,null).status());
-    assertEquals(400,raw("GET","/api/v1/localizations/xx",null,null).status());
+    var u = user();
+    String emoji = "🧑‍🔧";
+    expect(
+        201,
+        "POST",
+        "/appliances",
+        Map.of("kind", "custom", "name", emoji.repeat(40)),
+        u.token(),
+        key());
+    expect(
+        400,
+        "POST",
+        "/appliances",
+        Map.of("kind", "custom", "name", emoji.repeat(41)),
+        u.token(),
+        key());
+    var profile =
+        expect(200, "PATCH", "/me", Map.of("displayName", "", "onboarded", true), u.token(), key());
+    assertEquals("", profile.get("displayName").asText());
+    assertTrue(profile.get("onboarded").asBoolean());
+    expect(400, "PATCH", "/me", Map.of("displayName", emoji.repeat(41)), u.token(), key());
+    for (String language : List.of("en", "ro", "es", "it", "fr", "de", "pl", "hi", "ja"))
+      assertEquals(200, raw("GET", "/api/v1/localizations/" + language, null, null).status());
+    assertEquals(400, raw("GET", "/api/v1/localizations/xx", null, null).status());
   }
 
   @Test
   void ownedSharedStatusReadsCurrentSessionAndRevokeIsOwnerOnly() {
-    var u=user();var d=device(u,"washer");var s=start(u,d,"Shared",2);
-    String command=key();var share=expect(201,"POST","/sessions/"+s.get("id").asText()+"/share",null,u.token(),command);
-    assertEquals(share,expect(201,"POST","/sessions/"+s.get("id").asText()+"/share",null,u.token(),command));
-    assertNotEquals(s.get("id"),share.get("snapshot").get("id"));assertEquals(300,share.get("refreshAfterSeconds").asInt());
-    assertFalse(share.toString().contains(u.id()));assertFalse(share.toString().contains("writerHash"));assertFalse(share.toString().contains(d.get("id").asText()));
-    String path=publicPath(share);clock.advance(120);assertEquals("due",raw("GET",path,null,null).body().get("status").asText());
-    action(u,s,"complete");assertEquals("finished",raw("GET",path,null,null).body().get("status").asText());
-    action(u,s,"collect");assertEquals("collected",raw("GET",path,null,null).body().get("status").asText());
-    var other=user();expect(404,"POST","/sessions/"+s.get("id").asText()+"/share",null,other.token(),key());
-    String token=path.substring(path.lastIndexOf('/')+1);
-    expect(404,"DELETE","/session-shares/"+token,null,other.token(),key());
-    assertEquals(403,raw("DELETE",path,null,org.adancau.doneapi.common.Crypto.randomToken()).status());
-    expect(200,"DELETE","/session-shares/"+token,null,u.token(),key());assertEquals(410,raw("GET",path,null,null).status());
+    var u = user();
+    var d = device(u, "washer");
+    var s = start(u, d, "Shared", 2);
+    String command = key();
+    var share =
+        expect(
+            201, "POST", "/sessions/" + s.get("id").asText() + "/share", null, u.token(), command);
+    assertEquals(
+        share,
+        expect(
+            201, "POST", "/sessions/" + s.get("id").asText() + "/share", null, u.token(), command));
+    assertNotEquals(s.get("id"), share.get("snapshot").get("id"));
+    assertEquals(300, share.get("refreshAfterSeconds").asInt());
+    assertFalse(share.toString().contains(u.id()));
+    assertFalse(share.toString().contains("writerHash"));
+    assertFalse(share.toString().contains(d.get("id").asText()));
+    String path = publicPath(share);
+    clock.advance(120);
+    assertEquals("due", raw("GET", path, null, null).body().get("status").asText());
+    action(u, s, "complete");
+    assertEquals("finished", raw("GET", path, null, null).body().get("status").asText());
+    action(u, s, "collect");
+    assertEquals("collected", raw("GET", path, null, null).body().get("status").asText());
+    var other = user();
+    expect(404, "POST", "/sessions/" + s.get("id").asText() + "/share", null, other.token(), key());
+    String token = path.substring(path.lastIndexOf('/') + 1);
+    expect(404, "DELETE", "/session-shares/" + token, null, other.token(), key());
+    assertEquals(
+        403, raw("DELETE", path, null, org.adancau.doneapi.common.Crypto.randomToken()).status());
+    expect(200, "DELETE", "/session-shares/" + token, null, u.token(), key());
+    assertEquals(410, raw("GET", path, null, null).status());
   }
 
   @Test
   void localProjectionProtocolKeepsReadAndWriteCapabilitiesSeparate() {
-    var snapshot=localSnapshot();String writer=org.adancau.doneapi.common.Crypto.randomToken();UUID command=UUID.randomUUID();
-    var input=Map.of("snapshot",snapshot,"revision",1,"writeKey",writer,"commandId",command);
-    var created=raw("POST","/api/shares",input,null);assertEquals(201,created.status());assertFalse(created.body().toString().contains(writer));
-    assertEquals(created.body().get("shareUrl"),raw("POST","/api/shares",input,null).body().get("shareUrl"));
-    String path=publicPath(created.body());assertEquals(403,raw("PUT",path,Map.of("snapshot",snapshot,"revision",2),null).status());
-    clock.advance(30);snapshot.put("capturedAt",clock.instant().toString());snapshot.put("completedAt",clock.instant().toString());
-    assertEquals("finished",raw("PUT",path,Map.of("snapshot",snapshot,"revision",3),writer).body().get("status").asText());
-    assertEquals(409,raw("PUT",path,Map.of("snapshot",snapshot,"revision",2),writer).status());
-    assertEquals(204,raw("DELETE","/api/shares/by-command/"+command,null,writer).status());
-    assertEquals(410,raw("GET",path,null,null).status());assertEquals(410,raw("POST","/api/shares",input,null).status());
+    var snapshot = localSnapshot();
+    String writer = org.adancau.doneapi.common.Crypto.randomToken();
+    UUID command = UUID.randomUUID();
+    var input =
+        Map.of("snapshot", snapshot, "revision", 1, "writeKey", writer, "commandId", command);
+    var created = raw("POST", "/api/shares", input, null);
+    assertEquals(201, created.status());
+    assertFalse(created.body().toString().contains(writer));
+    assertEquals(
+        created.body().get("shareUrl"),
+        raw("POST", "/api/shares", input, null).body().get("shareUrl"));
+    String path = publicPath(created.body());
+    assertEquals(403, raw("PUT", path, Map.of("snapshot", snapshot, "revision", 2), null).status());
+    clock.advance(30);
+    snapshot.put("capturedAt", clock.instant().toString());
+    snapshot.put("completedAt", clock.instant().toString());
+    assertEquals(
+        "finished",
+        raw("PUT", path, Map.of("snapshot", snapshot, "revision", 3), writer)
+            .body()
+            .get("status")
+            .asText());
+    assertEquals(
+        409, raw("PUT", path, Map.of("snapshot", snapshot, "revision", 2), writer).status());
+    assertEquals(204, raw("DELETE", "/api/shares/by-command/" + command, null, writer).status());
+    assertEquals(410, raw("GET", path, null, null).status());
+    assertEquals(410, raw("POST", "/api/shares", input, null).status());
   }
 
   @Test
   void deletingAccountAlsoDeletesPublicOwnedLinksAndInvalidatesTokens() {
-    var u=user();var d=device(u,"oven");var s=start(u,d,"Share",3);
-    var share=expect(201,"POST","/sessions/"+s.get("id").asText()+"/share",null,u.token(),key());
-    expect(204,"DELETE","/me",Map.of("password",PASSWORD),u.token(),null);
-    assertEquals(404,raw("GET",publicPath(share),null,null).status());expect(401,"GET","/me",null,u.token(),null);
-    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM session_shares",Integer.class));
-    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM appliance_sessions",Integer.class));
+    var u = user();
+    var d = device(u, "oven");
+    var s = start(u, d, "Share", 3);
+    var share =
+        expect(201, "POST", "/sessions/" + s.get("id").asText() + "/share", null, u.token(), key());
+    expect(204, "DELETE", "/me", Map.of("password", PASSWORD), u.token(), null);
+    assertEquals(404, raw("GET", publicPath(share), null, null).status());
+    expect(401, "GET", "/me", null, u.token(), null);
+    assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM session_shares", Integer.class));
+    assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM appliance_sessions", Integer.class));
   }
 
   @Test
   void localSharingValidatesUnknownFieldsStateTimesAndExpiry() {
-    var snapshot=localSnapshot();String writer=org.adancau.doneapi.common.Crypto.randomToken();
-    var input=new LinkedHashMap<String,Object>();input.put("snapshot",snapshot);input.put("revision",1);input.put("writeKey",writer);input.put("commandId",UUID.randomUUID());
-    snapshot.put("ownerId",UUID.randomUUID());assertEquals(400,raw("POST","/api/shares",input,null).status());snapshot.remove("ownerId");
-    snapshot.put("completedAt",clock.instant().plusSeconds(60).toString());assertEquals(400,raw("POST","/api/shares",input,null).status());snapshot.remove("completedAt");
-    var share=raw("POST","/api/shares",input,null);assertEquals(201,share.status());clock.advance(604801);
-    assertEquals(410,raw("GET",publicPath(share.body()),null,null).status());
+    var snapshot = localSnapshot();
+    String writer = org.adancau.doneapi.common.Crypto.randomToken();
+    var input = new LinkedHashMap<String, Object>();
+    input.put("snapshot", snapshot);
+    input.put("revision", 1);
+    input.put("writeKey", writer);
+    input.put("commandId", UUID.randomUUID());
+    snapshot.put("ownerId", UUID.randomUUID());
+    assertEquals(400, raw("POST", "/api/shares", input, null).status());
+    snapshot.remove("ownerId");
+    snapshot.put("completedAt", clock.instant().plusSeconds(60).toString());
+    assertEquals(400, raw("POST", "/api/shares", input, null).status());
+    snapshot.remove("completedAt");
+    var share = raw("POST", "/api/shares", input, null);
+    assertEquals(201, share.status());
+    clock.advance(604801);
+    assertEquals(410, raw("GET", publicPath(share.body()), null, null).status());
   }
 
   @Test
   void appleDeletionLoginNeverCreatesAccountsAndUsesRecentAppleAuthentication() {
-    var passwordUser=user();
-    when(apple.authenticate(any(),anyString())).thenReturn(new AppleGateway.Identity("linked-sub","linked@example.com","native-refresh"));
-    var challenge=expect(200,"POST","/auth/apple/challenge",null,null,null);
-    expect(200,"POST","/me/identities/apple",Map.of("challengeId",challenge.get("challengeId").asText(),"identityToken","test","authorizationCode","test"),passwordUser.token(),null);
-    when(apple.authenticate(any(),anyString())).thenReturn(new AppleGateway.Identity("linked-sub","linked@example.com","web-refresh","ro.done.web"));
-    challenge=expect(200,"POST","/auth/apple/challenge",null,null,null);
-    var login=expect(200,"POST","/auth/apple/delete-login",Map.of("challengeId",challenge.get("challengeId").asText(),"identityToken","test","authorizationCode","test","clientId","ro.done.web"),null,null);
-    expect(204,"DELETE","/me",null,login.get("accessToken").asText(),null);verify(apple).revoke("web-refresh","ro.done.web");
-    when(apple.authenticate(any(),anyString())).thenReturn(new AppleGateway.Identity("unknown-sub",null,"unknown-refresh"));
-    challenge=expect(200,"POST","/auth/apple/challenge",null,null,null);
-    expect(401,"POST","/auth/apple/delete-login",Map.of("challengeId",challenge.get("challengeId").asText(),"identityToken","test","authorizationCode","test"),null,null);
-    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM app_users",Integer.class));
+    var passwordUser = user();
+    when(apple.authenticate(any(), anyString()))
+        .thenReturn(
+            new AppleGateway.Identity("linked-sub", "linked@example.com", "native-refresh"));
+    var challenge = expect(200, "POST", "/auth/apple/challenge", null, null, null);
+    expect(
+        200,
+        "POST",
+        "/me/identities/apple",
+        Map.of(
+            "challengeId",
+            challenge.get("challengeId").asText(),
+            "identityToken",
+            "test",
+            "authorizationCode",
+            "test"),
+        passwordUser.token(),
+        null);
+    when(apple.authenticate(any(), anyString()))
+        .thenReturn(
+            new AppleGateway.Identity(
+                "linked-sub", "linked@example.com", "web-refresh", "ro.done.web"));
+    challenge = expect(200, "POST", "/auth/apple/challenge", null, null, null);
+    var login =
+        expect(
+            200,
+            "POST",
+            "/auth/apple/delete-login",
+            Map.of(
+                "challengeId",
+                challenge.get("challengeId").asText(),
+                "identityToken",
+                "test",
+                "authorizationCode",
+                "test",
+                "clientId",
+                "ro.done.web"),
+            null,
+            null);
+    expect(204, "DELETE", "/me", null, login.get("accessToken").asText(), null);
+    verify(apple).revoke("web-refresh", "ro.done.web");
+    when(apple.authenticate(any(), anyString()))
+        .thenReturn(new AppleGateway.Identity("unknown-sub", null, "unknown-refresh"));
+    challenge = expect(200, "POST", "/auth/apple/challenge", null, null, null);
+    expect(
+        401,
+        "POST",
+        "/auth/apple/delete-login",
+        Map.of(
+            "challengeId",
+            challenge.get("challengeId").asText(),
+            "identityToken",
+            "test",
+            "authorizationCode",
+            "test"),
+        null,
+        null);
+    assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM app_users", Integer.class));
   }
 
   @Test
   void frontendStatisticsUseRollingWindowsMeasuredProgramAndSevenDayChart() {
-    var u=user();var d=device(u,"oven");
-    var s=expect(201,"POST","/appliances/"+d.get("id").asText()+"/sessions",Map.of("mode","stopwatch"),u.token(),key());clock.advance(63);action(u,s,"complete");
-    expect(200,"POST","/sessions/"+s.get("id").asText()+"/measured-program",Map.of("name","Measured"),u.token(),key());
-    for(var period:Map.of("week",7,"month",30,"year",365).entrySet()) {
-      var stats=expect(200,"GET","/statistics/rolling?period="+period.getKey(),null,u.token(),null);
-      assertEquals(period.getValue(),stats.get("windowDays").asInt());assertEquals(1,stats.get("completedSessions").asInt());
-      assertEquals(63,stats.get("averageDurationSeconds").asLong());assertEquals(7,stats.get("usagePerDay").size());
-      assertEquals("Measured",stats.get("mostUsedProgram").get("name").asText());assertEquals(1,stats.get("recentSessions").size());
-      assertEquals(clock.instant().minusSeconds(period.getValue()*86400L).toString(),stats.get("from").asText());
+    var u = user();
+    var d = device(u, "oven");
+    var s =
+        expect(
+            201,
+            "POST",
+            "/appliances/" + d.get("id").asText() + "/sessions",
+            Map.of("mode", "stopwatch"),
+            u.token(),
+            key());
+    clock.advance(63);
+    action(u, s, "complete");
+    expect(
+        200,
+        "POST",
+        "/sessions/" + s.get("id").asText() + "/measured-program",
+        Map.of("name", "Measured"),
+        u.token(),
+        key());
+    for (var period : Map.of("week", 7, "month", 30, "year", 365).entrySet()) {
+      var stats =
+          expect(
+              200, "GET", "/statistics/rolling?period=" + period.getKey(), null, u.token(), null);
+      assertEquals(period.getValue(), stats.get("windowDays").asInt());
+      assertEquals(1, stats.get("completedSessions").asInt());
+      assertEquals(63, stats.get("averageDurationSeconds").asLong());
+      assertEquals(7, stats.get("usagePerDay").size());
+      assertEquals("Measured", stats.get("mostUsedProgram").get("name").asText());
+      assertEquals(1, stats.get("recentSessions").size());
+      assertEquals(
+          clock.instant().minusSeconds(period.getValue() * 86400L).toString(),
+          stats.get("from").asText());
     }
   }
 
   @Test
-  void publicPagesAndConfigurationAreAccessibleAndNeverExposePrivateConfiguration() throws Exception {
-    for(String path:List.of("/","/privacy","/privacy-policy","/support","/contact","/delete-account","/account-deletion","/terms","/disclaimer")) {
-      var response=http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+path)).GET().build(),HttpResponse.BodyHandlers.ofString());
-      assertEquals(200,response.statusCode(),path);
+  void publicPagesAndConfigurationAreAccessibleAndNeverExposePrivateConfiguration()
+      throws Exception {
+    for (String path :
+        List.of(
+            "/",
+            "/privacy",
+            "/privacy-policy",
+            "/support",
+            "/contact",
+            "/delete-account",
+            "/account-deletion",
+            "/terms",
+            "/disclaimer")) {
+      var response =
+          http.send(
+              HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build(),
+              HttpResponse.BodyHandlers.ofString());
+      assertEquals(200, response.statusCode(), path);
       assertTrue(response.body().contains(path.equals("/") ? "/site/landing.js" : "/site/site.js"));
-      if(path.equals("/")) {
+      if (path.equals("/")) {
         assertTrue(response.body().contains("https://apps.apple.com/app/id6820980773"));
         assertFalse(response.body().contains("noindex"));
       }
-      assertEquals("no-referrer",response.headers().firstValue("Referrer-Policy").orElseThrow());
-      assertTrue(response.headers().firstValue("Content-Security-Policy").orElseThrow().contains("frame-ancestors 'none'"));
+      assertEquals("no-referrer", response.headers().firstValue("Referrer-Policy").orElseThrow());
+      assertTrue(
+          response
+              .headers()
+              .firstValue("Content-Security-Policy")
+              .orElseThrow()
+              .contains("frame-ancestors 'none'"));
     }
-    for(String path:List.of("/site/landing.js","/site/landing.css","/site/landing-copy.js",
-        "/site/landing-appliances.jpg","/site/landing-icon.png","/site/app-store-badge.svg")) {
-      for(String method:List.of("GET","HEAD")) {
-        var response=http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+path))
-            .method(method,HttpRequest.BodyPublishers.noBody()).build(),HttpResponse.BodyHandlers.discarding());
-        assertEquals(200,response.statusCode(),method+" "+path);
+    for (String path :
+        List.of(
+            "/site/landing.js",
+            "/site/landing.css",
+            "/site/landing-copy.js",
+            "/site/landing-appliances.jpg",
+            "/site/landing-icon.png",
+            "/site/app-store-badge.svg")) {
+      for (String method : List.of("GET", "HEAD")) {
+        var response =
+            http.send(
+                HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+                    .method(method, HttpRequest.BodyPublishers.noBody())
+                    .build(),
+                HttpResponse.BodyHandlers.discarding());
+        assertEquals(200, response.statusCode(), method + " " + path);
       }
     }
-    var config=raw("GET","/api/v1/public-config",null,null);assertEquals(200,config.status());assertTrue(config.body().get("mock").asBoolean());
-    assertFalse(config.body().toString().contains("secret"));assertFalse(config.body().toString().contains("encryption"));assertFalse(config.body().get("appleWebEnabled").asBoolean());
+    var config = raw("GET", "/api/v1/public-config", null, null);
+    assertEquals(200, config.status());
+    assertTrue(config.body().get("mock").asBoolean());
+    assertFalse(config.body().toString().contains("secret"));
+    assertFalse(config.body().toString().contains("encryption"));
+    assertFalse(config.body().get("appleWebEnabled").asBoolean());
   }
 
-
   String requestRecovery(User user) throws Exception {
-    expect(202,"POST","/auth/forgot-password",Map.of("email",user.email()),null,null);
+    expect(202, "POST", "/auth/forgot-password", Map.of("email", user.email()), null, null);
     assertTrue(recovery.deliverNext());
-    String body=smtp.takeBody();
-    var match=java.util.regex.Pattern.compile("#token=([A-Za-z0-9_-]{43})").matcher(body);
-    assertTrue(match.find(),"Reset capability missing from SMTP message");
+    String body = smtp.takeBody();
+    var match = java.util.regex.Pattern.compile("#token=([A-Za-z0-9_-]{43})").matcher(body);
+    assertTrue(match.find(), "Reset capability missing from SMTP message");
     assertTrue(body.contains("http://127.0.0.1:8080/reset-password?lang="));
     return match.group(1);
   }
 
   @Test
   void passwordResetDeliversRealEmailConsumesTokenAndRevokesEverySession() throws Exception {
-    var u=user();var second=expect(200,"POST","/auth/login",Map.of("email",u.email(),"password",PASSWORD),null,null);
-    String token=requestRecovery(u),newPassword="New secure password 123!";
-    String stored=jdbc.queryForObject("SELECT token_hash FROM password_reset_tokens",String.class);
-    assertNotEquals(token,stored);assertEquals(org.adancau.doneapi.common.Crypto.hash(token),stored);
-    expect(204,"POST","/auth/reset-password",Map.of("token",token,"newPassword",newPassword),null,null);
-    expect(401,"GET","/me",null,u.token(),null);
-    expect(401,"GET","/me",null,second.get("accessToken").asText(),null);
-    expect(401,"POST","/auth/refresh",Map.of("refreshToken",u.refresh()),null,null);
-    expect(401,"POST","/auth/login",Map.of("email",u.email(),"password",PASSWORD),null,null);
-    expect(200,"POST","/auth/login",Map.of("email",u.email(),"password",newPassword),null,null);
-    assertEquals("invalid_reset_token",expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null).get("code").asText());
-    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens",Integer.class));
-    assertTrue(recovery.deliverNext());String changed=smtp.takeBody();assertFalse(changed.contains(newPassword));assertFalse(changed.contains("#token="));
+    var u = user();
+    var second =
+        expect(
+            200,
+            "POST",
+            "/auth/login",
+            Map.of("email", u.email(), "password", PASSWORD),
+            null,
+            null);
+    String token = requestRecovery(u), newPassword = "New secure password 123!";
+    String stored =
+        jdbc.queryForObject("SELECT token_hash FROM password_reset_tokens", String.class);
+    assertNotEquals(token, stored);
+    assertEquals(org.adancau.doneapi.common.Crypto.hash(token), stored);
+    expect(
+        204,
+        "POST",
+        "/auth/reset-password",
+        Map.of("token", token, "newPassword", newPassword),
+        null,
+        null);
+    expect(401, "GET", "/me", null, u.token(), null);
+    expect(401, "GET", "/me", null, second.get("accessToken").asText(), null);
+    expect(401, "POST", "/auth/refresh", Map.of("refreshToken", u.refresh()), null, null);
+    expect(
+        401, "POST", "/auth/login", Map.of("email", u.email(), "password", PASSWORD), null, null);
+    expect(
+        200,
+        "POST",
+        "/auth/login",
+        Map.of("email", u.email(), "password", newPassword),
+        null,
+        null);
+    assertEquals(
+        "invalid_reset_token",
+        expect(
+                400,
+                "POST",
+                "/auth/reset-password",
+                Map.of("token", token, "newPassword", PASSWORD),
+                null,
+                null)
+            .get("code")
+            .asText());
+    assertEquals(
+        0, jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens", Integer.class));
+    assertTrue(recovery.deliverNext());
+    String changed = smtp.takeBody();
+    assertFalse(changed.contains(newPassword));
+    assertFalse(changed.contains("#token="));
   }
 
   @Test
   void recoveryUnknownAppleOnlyAndThrottledAddressesHaveIdenticalResponses() throws Exception {
-    var u=user();var accepted=expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null);
-    assertEquals(accepted,expect(202,"POST","/auth/forgot-password",Map.of("email","nobody@example.test"),null,null));
-    for(int i=0;i<12;i++)assertEquals(accepted,expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null));
-    assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue",Integer.class));
+    var u = user();
+    var accepted =
+        expect(202, "POST", "/auth/forgot-password", Map.of("email", u.email()), null, null);
+    assertEquals(
+        accepted,
+        expect(
+            202,
+            "POST",
+            "/auth/forgot-password",
+            Map.of("email", "nobody@example.test"),
+            null,
+            null));
+    for (int i = 0; i < 12; i++)
+      assertEquals(
+          accepted,
+          expect(202, "POST", "/auth/forgot-password", Map.of("email", u.email()), null, null));
+    assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue", Integer.class));
     // An Apple-only identity must not gain a password through email recovery.
-    jdbc.update("UPDATE app_users SET password_hash=NULL WHERE id=?",UUID.fromString(u.id()));
-    while(recovery.deliverNext()){}
-    assertTrue(smtp.messages.isEmpty());assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens",Integer.class));
+    jdbc.update("UPDATE app_users SET password_hash=NULL WHERE id=?", UUID.fromString(u.id()));
+    while (recovery.deliverNext()) {}
+    assertTrue(smtp.messages.isEmpty());
+    assertEquals(
+        0, jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens", Integer.class));
   }
 
   @Test
   void resetLinksExpireAndAuthenticatedPasswordChangeCancelsTokensAndQueuedMail() throws Exception {
-    var u=user();String token=requestRecovery(u);clock.advance(900);
-    expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null);
+    var u = user();
+    String token = requestRecovery(u);
+    clock.advance(900);
+    expect(
+        400,
+        "POST",
+        "/auth/reset-password",
+        Map.of("token", token, "newPassword", PASSWORD),
+        null,
+        null);
     // Authenticate again after the old access token expires.
-    var logged=expect(200,"POST","/auth/login",Map.of("email",u.email(),"password",PASSWORD),null,null);
-    token=requestRecovery(u);
-    expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null);
-    expect(204,"POST","/me/password",Map.of("currentPassword",PASSWORD,"newPassword","Another password 123!"),logged.get("accessToken").asText(),null);
-    expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null);
-    assertFalse(recovery.deliverNext());assertTrue(smtp.messages.isEmpty());
+    var logged =
+        expect(
+            200,
+            "POST",
+            "/auth/login",
+            Map.of("email", u.email(), "password", PASSWORD),
+            null,
+            null);
+    token = requestRecovery(u);
+    expect(202, "POST", "/auth/forgot-password", Map.of("email", u.email()), null, null);
+    expect(
+        204,
+        "POST",
+        "/me/password",
+        Map.of("currentPassword", PASSWORD, "newPassword", "Another password 123!"),
+        logged.get("accessToken").asText(),
+        null);
+    expect(
+        400,
+        "POST",
+        "/auth/reset-password",
+        Map.of("token", token, "newPassword", PASSWORD),
+        null,
+        null);
+    assertFalse(recovery.deliverNext());
+    assertTrue(smtp.messages.isEmpty());
   }
 
   @Test
   void resetTokenCannotWinTwiceUnderConcurrentRequests() throws Exception {
-    var u=user();String token=requestRecovery(u);
-    try(var pool=Executors.newFixedThreadPool(2)) {
-      var gate=new CountDownLatch(1);var futures=new ArrayList<Future<Response>>();
-      for(int i=0;i<2;i++)futures.add(pool.submit(() -> {gate.await();return call("POST","/auth/reset-password",Map.of("token",token,"newPassword","Concurrent password 123!"),null,null);}));
-      gate.countDown();var statuses=new ArrayList<Integer>();for(var f:futures)statuses.add(f.get(15,TimeUnit.SECONDS).status());
-      statuses.sort(Integer::compareTo);assertEquals(List.of(204,400),statuses);
+    var u = user();
+    String token = requestRecovery(u);
+    try (var pool = Executors.newFixedThreadPool(2)) {
+      var gate = new CountDownLatch(1);
+      var futures = new ArrayList<Future<Response>>();
+      for (int i = 0; i < 2; i++)
+        futures.add(
+            pool.submit(
+                () -> {
+                  gate.await();
+                  return call(
+                      "POST",
+                      "/auth/reset-password",
+                      Map.of("token", token, "newPassword", "Concurrent password 123!"),
+                      null,
+                      null);
+                }));
+      gate.countDown();
+      var statuses = new ArrayList<Integer>();
+      for (var f : futures) statuses.add(f.get(15, TimeUnit.SECONDS).status());
+      statuses.sort(Integer::compareTo);
+      assertEquals(List.of(204, 400), statuses);
     }
   }
 
   @Test
   void recoveryRejectsInvalidAndOversizedPasswordsWithoutConsumingLink() throws Exception {
-    var u=user();String token=requestRecovery(u);
-    for(String password:List.of("short","é".repeat(40),"a".repeat(65)))
-      expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",password),null,null);
-    expect(400,"POST","/auth/reset-password",Map.of("token",org.adancau.doneapi.common.Crypto.randomToken(),"newPassword",PASSWORD),null,null);
-    expect(204,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null);
+    var u = user();
+    String token = requestRecovery(u);
+    for (String password : List.of("short", "é".repeat(40), "a".repeat(65)))
+      expect(
+          400,
+          "POST",
+          "/auth/reset-password",
+          Map.of("token", token, "newPassword", password),
+          null,
+          null);
+    expect(
+        400,
+        "POST",
+        "/auth/reset-password",
+        Map.of("token", org.adancau.doneapi.common.Crypto.randomToken(), "newPassword", PASSWORD),
+        null,
+        null);
+    expect(
+        204,
+        "POST",
+        "/auth/reset-password",
+        Map.of("token", token, "newPassword", PASSWORD),
+        null,
+        null);
   }
 
   @Test
   void failedSmtpDeliveryRemainsQueuedAndRetriesWithoutExposingToken() throws Exception {
-    var u=user();smtp.rejectNext=true;
-    var body=expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null);
-    assertFalse(body.toString().contains("token"));assertTrue(recovery.deliverNext());assertTrue(smtp.messages.isEmpty());
-    assertEquals(1,jdbc.queryForObject("SELECT attempts FROM recovery_mail_queue",Integer.class));
-    assertFalse(recovery.deliverNext());clock.advance(60);assertTrue(recovery.deliverNext());assertTrue(smtp.takeBody().contains("#token="));
-    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue",Integer.class));
+    var u = user();
+    smtp.rejectNext = true;
+    var body = expect(202, "POST", "/auth/forgot-password", Map.of("email", u.email()), null, null);
+    assertFalse(body.toString().contains("token"));
+    assertTrue(recovery.deliverNext());
+    assertTrue(smtp.messages.isEmpty());
+    assertEquals(1, jdbc.queryForObject("SELECT attempts FROM recovery_mail_queue", Integer.class));
+    assertFalse(recovery.deliverNext());
+    clock.advance(60);
+    assertTrue(recovery.deliverNext());
+    assertTrue(smtp.takeBody().contains("#token="));
+    assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue", Integer.class));
   }
 
   @Test
   void deleteAccountCancelsOutstandingRecovery() throws Exception {
-    var u=user();String token=requestRecovery(u);
-    expect(202,"POST","/auth/forgot-password",Map.of("email",u.email()),null,null);
-    jdbc.update("INSERT INTO recovery_mail_queue(id,email,kind,created_at,expires_at,next_attempt_at) VALUES (?,?,'changed',?,?,?)",
-        UUID.randomUUID(),u.email(),java.sql.Timestamp.from(clock.instant()),java.sql.Timestamp.from(clock.instant().plusSeconds(3600)),java.sql.Timestamp.from(clock.instant()));
-    expect(204,"DELETE","/me",Map.of("password",PASSWORD),u.token(),null);
-    expect(400,"POST","/auth/reset-password",Map.of("token",token,"newPassword",PASSWORD),null,null);
-    assertFalse(recovery.deliverNext());assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens",Integer.class));
-    assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue",Integer.class));
+    var u = user();
+    String token = requestRecovery(u);
+    expect(202, "POST", "/auth/forgot-password", Map.of("email", u.email()), null, null);
+    jdbc.update(
+        "INSERT INTO recovery_mail_queue(id,email,kind,created_at,expires_at,next_attempt_at)"
+            + " VALUES (?,?,'changed',?,?,?)",
+        UUID.randomUUID(),
+        u.email(),
+        java.sql.Timestamp.from(clock.instant()),
+        java.sql.Timestamp.from(clock.instant().plusSeconds(3600)),
+        java.sql.Timestamp.from(clock.instant()));
+    expect(204, "DELETE", "/me", Map.of("password", PASSWORD), u.token(), null);
+    expect(
+        400,
+        "POST",
+        "/auth/reset-password",
+        Map.of("token", token, "newPassword", PASSWORD),
+        null,
+        null);
+    assertFalse(recovery.deliverNext());
+    assertEquals(
+        0, jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens", Integer.class));
+    assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM recovery_mail_queue", Integer.class));
   }
 
   @Test
   void everyPrivateControllerRouteRequiresAuthenticationBeforeDtoParsing() {
-    for(var info:mapping.getHandlerMethods().keySet())for(String template:info.getPatternValues()) {
-      if(!template.startsWith("/api/v1/") || template.startsWith("/api/v1/localizations/") || template.equals("/api/v1/public-config"))continue;
-      if(template.startsWith("/api/v1/auth/") && !template.contains("logout"))continue;
-      String path=template.replaceAll("\\{[^}]+}",UUID.randomUUID().toString());
-      for(var method:info.getMethodsCondition().getMethods())
-        assertEquals(401,raw(method.name(),path,null,null).status(),method+" "+path);
-    }
-    var u=user();
-    for(String path:List.of("/api/v1/future-admin","/api/v1/auth/login","/api/shares"))
-      assertEquals(path.startsWith("/api/shares")?401:403,raw("PATCH",path,Map.of(),u.token()).status());
-    assertEquals(403,raw("GET","/actuator/env",null,u.token()).status());
-    assertEquals(403,raw("GET","/site/private-config.json",null,u.token()).status());
+    for (var info : mapping.getHandlerMethods().keySet())
+      for (String template : info.getPatternValues()) {
+        if (!template.startsWith("/api/v1/")
+            || template.startsWith("/api/v1/localizations/")
+            || template.equals("/api/v1/public-config")) continue;
+        if (template.startsWith("/api/v1/auth/") && !template.contains("logout")) continue;
+        String path = template.replaceAll("\\{[^}]+}", UUID.randomUUID().toString());
+        for (var method : info.getMethodsCondition().getMethods())
+          assertEquals(401, raw(method.name(), path, null, null).status(), method + " " + path);
+      }
+    var u = user();
+    for (String path : List.of("/api/v1/future-admin", "/api/v1/auth/login", "/api/shares"))
+      assertEquals(
+          path.startsWith("/api/shares") ? 401 : 403,
+          raw("PATCH", path, Map.of(), u.token()).status());
+    assertEquals(403, raw("GET", "/actuator/env", null, u.token()).status());
+    assertEquals(403, raw("GET", "/site/private-config.json", null, u.token()).status());
   }
 
   @Test
   void injectionPayloadsAreLiteralDataAndNeverChangeOwnershipOrSchema() {
-    var u=user();var other=user();String payload="x'); DROP TABLE app_users;--";
-    var appliance=expect(201,"POST","/appliances",Map.of("kind","custom","name",payload),u.token(),key());
-    assertEquals(payload,appliance.get("name").asText());assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM app_users",Integer.class));
-    expect(404,"GET","/appliances/"+appliance.get("id").asText(),null,other.token(),null);
-    expect(400,"GET","/appliances/'%20OR%201=1--",null,u.token(),null);
-    assertNotEquals(200,call("POST","/auth/login",Map.of("email","' OR 1=1 --@example.test","password",PASSWORD),null,null).status());
-    var script=expect(201,"POST","/households",Map.of("name","<script>alert(1)</script>"),u.token(),key());
-    assertEquals("<script>alert(1)</script>",script.get("name").asText());
-    assertEquals(1,expect(200,"GET","/households",null,other.token(),null).size());
+    var u = user();
+    var other = user();
+    String payload = "x'); DROP TABLE app_users;--";
+    var appliance =
+        expect(
+            201,
+            "POST",
+            "/appliances",
+            Map.of("kind", "custom", "name", payload),
+            u.token(),
+            key());
+    assertEquals(payload, appliance.get("name").asText());
+    assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM app_users", Integer.class));
+    expect(404, "GET", "/appliances/" + appliance.get("id").asText(), null, other.token(), null);
+    expect(400, "GET", "/appliances/'%20OR%201=1--", null, u.token(), null);
+    assertNotEquals(
+        200,
+        call(
+                "POST",
+                "/auth/login",
+                Map.of("email", "' OR 1=1 --@example.test", "password", PASSWORD),
+                null,
+                null)
+            .status());
+    var script =
+        expect(
+            201,
+            "POST",
+            "/households",
+            Map.of("name", "<script>alert(1)</script>"),
+            u.token(),
+            key());
+    assertEquals("<script>alert(1)</script>", script.get("name").asText());
+    assertEquals(1, expect(200, "GET", "/households", null, other.token(), null).size());
   }
 
   @Test
   void malformedJsonAndUnexpectedFieldsAreRejected() throws Exception {
-    String url="http://127.0.0.1:"+port+"/api/v1/auth/login";
-    for(String body:List.of("{\"email\":\"a@example.test\",\"email\":\"b@example.test\",\"password\":\"x\"}",
-        "{\"email\":\"a@example.test\",\"password\":\"x\"} {}", "{\"extra\":"+"[".repeat(40)+"0"+"]".repeat(40)+"}")) {
-      var response=http.send(HttpRequest.newBuilder(URI.create(url)).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
-      assertEquals(400,response.statusCode());assertFalse(response.body().contains("Exception"));
+    String url = "http://127.0.0.1:" + port + "/api/v1/auth/login";
+    for (String body :
+        List.of(
+            "{\"email\":\"a@example.test\",\"email\":\"b@example.test\",\"password\":\"x\"}",
+            "{\"email\":\"a@example.test\",\"password\":\"x\"} {}",
+            "{\"extra\":" + "[".repeat(40) + "0" + "]".repeat(40) + "}")) {
+      var response =
+          http.send(
+              HttpRequest.newBuilder(URI.create(url))
+                  .header("Content-Type", "application/json")
+                  .POST(HttpRequest.BodyPublishers.ofString(body))
+                  .build(),
+              HttpResponse.BodyHandlers.ofString());
+      assertEquals(400, response.statusCode());
+      assertFalse(response.body().contains("Exception"));
     }
-    expect(400,"POST","/auth/register",Map.of("email","a@example.test","password",PASSWORD,"displayName","A","roles",List.of("ADMIN")),null,null);
+    expect(
+        400,
+        "POST",
+        "/auth/register",
+        Map.of(
+            "email",
+            "a@example.test",
+            "password",
+            PASSWORD,
+            "displayName",
+            "A",
+            "roles",
+            List.of("ADMIN")),
+        null,
+        null);
   }
 
   @Test
   void recoveryPagesUseStrictHeadersAndDoNotAllowForeignOrigins() throws Exception {
-    for(String page:List.of("/forgot-password","/reset-password")) {
-      var response=http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+page)).GET().build(),HttpResponse.BodyHandlers.ofString());
-      assertEquals(200,response.statusCode());assertEquals("no-referrer",response.headers().firstValue("Referrer-Policy").orElseThrow());
+    for (String page : List.of("/forgot-password", "/reset-password")) {
+      var response =
+          http.send(
+              HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + page)).GET().build(),
+              HttpResponse.BodyHandlers.ofString());
+      assertEquals(200, response.statusCode());
+      assertEquals("no-referrer", response.headers().firstValue("Referrer-Policy").orElseThrow());
       assertTrue(response.headers().firstValue("Cache-Control").orElseThrow().contains("no-store"));
-      assertEquals("DENY",response.headers().firstValue("X-Frame-Options").orElseThrow());
-      assertFalse(response.headers().firstValue("Content-Security-Policy").orElseThrow().contains("appleid"));
-      assertTrue(response.body().contains("/site/recovery.js"));assertFalse(response.body().contains("token="));
+      assertEquals("DENY", response.headers().firstValue("X-Frame-Options").orElseThrow());
+      assertFalse(
+          response
+              .headers()
+              .firstValue("Content-Security-Policy")
+              .orElseThrow()
+              .contains("appleid"));
+      assertTrue(response.body().contains("/site/recovery.js"));
+      assertFalse(response.body().contains("token="));
     }
-    var cors=http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/v1/me"))
-        .header("Origin","https://attacker.invalid").header("Access-Control-Request-Method","PATCH").method("OPTIONS",HttpRequest.BodyPublishers.noBody()).build(),HttpResponse.BodyHandlers.ofString());
-    assertTrue(cors.statusCode()>=400);assertTrue(cors.headers().firstValue("Access-Control-Allow-Origin").isEmpty());
+    var cors =
+        http.send(
+            HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/v1/me"))
+                .header("Origin", "https://attacker.invalid")
+                .header("Access-Control-Request-Method", "PATCH")
+                .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
+                .build(),
+            HttpResponse.BodyHandlers.ofString());
+    assertTrue(cors.statusCode() >= 400);
+    assertTrue(cors.headers().firstValue("Access-Control-Allow-Origin").isEmpty());
   }
-
 
   @Test
   void jwtRejectsTamperingWrongAudienceIssuerAndMalformedSessionClaims() throws Exception {
-    var u=user();String sid=com.nimbusds.jwt.SignedJWT.parse(u.token()).getJWTClaimsSet().getStringClaim("sid");
-    var valid=new HashMap<String,Object>();valid.put("sub",u.id());valid.put("sid",sid);valid.put("iss","done-api");
-    valid.put("aud",List.of("done-apple"));valid.put("iat",clock.instant());valid.put("exp",clock.instant().plusSeconds(900));valid.put("nbf",clock.instant());
-    for(var invalid:List.<Map<String,Object>>of(Map.of("aud",List.of("other-app")),Map.of("iss","other-issuer"),Map.of("sid","not-a-uuid"),
-        Map.of("iat",clock.instant().plusSeconds(60)),Map.of("exp",clock.instant().plusSeconds(86400)),Map.of("nbf",clock.instant().plusSeconds(60)))) {
-      var claims=new HashMap<>(valid);claims.putAll(invalid);
-      var encoded=jwtEncoder.encode(org.springframework.security.oauth2.jwt.JwtEncoderParameters.from(
-          org.springframework.security.oauth2.jwt.JwsHeader.with(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build(),
-          org.springframework.security.oauth2.jwt.JwtClaimsSet.builder().claims(c -> c.putAll(claims)).build()));
-      expect(401,"GET","/me",null,encoded.getTokenValue(),null);
+    var u = user();
+    String sid =
+        com.nimbusds.jwt.SignedJWT.parse(u.token()).getJWTClaimsSet().getStringClaim("sid");
+    var valid = new HashMap<String, Object>();
+    valid.put("sub", u.id());
+    valid.put("sid", sid);
+    valid.put("iss", "done-api");
+    valid.put("aud", List.of("done-apple"));
+    valid.put("iat", clock.instant());
+    valid.put("exp", clock.instant().plusSeconds(900));
+    valid.put("nbf", clock.instant());
+    for (var invalid :
+        List.<Map<String, Object>>of(
+            Map.of("aud", List.of("other-app")),
+            Map.of("iss", "other-issuer"),
+            Map.of("sid", "not-a-uuid"),
+            Map.of("iat", clock.instant().plusSeconds(60)),
+            Map.of("exp", clock.instant().plusSeconds(86400)),
+            Map.of("nbf", clock.instant().plusSeconds(60)))) {
+      var claims = new HashMap<>(valid);
+      claims.putAll(invalid);
+      var encoded =
+          jwtEncoder.encode(
+              org.springframework.security.oauth2.jwt.JwtEncoderParameters.from(
+                  org.springframework.security.oauth2.jwt.JwsHeader.with(
+                          org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256)
+                      .build(),
+                  org.springframework.security.oauth2.jwt.JwtClaimsSet.builder()
+                      .claims(c -> c.putAll(claims))
+                      .build()));
+      expect(401, "GET", "/me", null, encoded.getTokenValue(), null);
     }
-    String[] parts=u.token().split("\\.");
-    expect(401,"GET","/me",null,parts[0]+"."+parts[1]+"."+org.adancau.doneapi.common.Crypto.randomToken(),null);
+    String[] parts = u.token().split("\\.");
+    expect(
+        401,
+        "GET",
+        "/me",
+        null,
+        parts[0] + "." + parts[1] + "." + org.adancau.doneapi.common.Crypto.randomToken(),
+        null);
+  }
+
+  String invitation(User owner) {
+    var invite =
+        expect(
+            200, "POST", "/households/" + owner.id() + "/invitations", null, owner.token(), key());
+    return invite.get("inviteUrl").asText().replaceAll("^.*/invite/", "");
+  }
+
+  void join(User owner, User member) {
+    String token = invitation(owner);
+    expect(200, "POST", "/household-invitations/" + token + "/accept", null, member.token(), key());
+  }
+
+  @Test
+  void sharedHouseholdMirrorsSessionsButNeverOtherHomes() {
+    var owner = user();
+    var member = user();
+    var stranger = user();
+    var washer = device(owner, "washer");
+    String privateHome =
+        expect(201, "POST", "/households", Map.of("name", "Private"), owner.token(), key())
+            .get("id")
+            .asText();
+    var hidden =
+        expect(
+            201,
+            "POST",
+            "/appliances",
+            Map.of("kind", "oven", "householdId", privateHome),
+            owner.token(),
+            key());
+    var secret = start(owner, hidden, "Private cooking", 20);
+    var session = start(owner, washer, "Cotton", 60);
+    expect(404, "GET", "/sessions/" + session.get("id").asText(), null, member.token(), null);
+    join(owner, member);
+    var home = expect(200, "GET", "/households/" + owner.id(), null, member.token(), null);
+    assertEquals("member", home.get("role").asText());
+    assertEquals(2, home.get("memberCount").asInt());
+    var state = expect(200, "GET", "/state", null, member.token(), null);
+    assertEquals(1, state.get("appliances").size());
+    assertEquals(washer.get("id"), state.get("appliances").get(0).get("id"));
+    expect(404, "GET", "/sessions/" + secret.get("id").asText(), null, member.token(), null);
+    expect(404, "GET", "/sessions/" + session.get("id").asText(), null, stranger.token(), null);
+    action(member, session, "complete");
+    assertFalse(
+        expect(200, "GET", "/sessions/" + session.get("id").asText(), null, owner.token(), null)
+            .get("completedAt")
+            .isNull());
+    action(owner, session, "collect");
+    assertFalse(
+        expect(200, "GET", "/sessions/" + session.get("id").asText(), null, member.token(), null)
+            .get("collectedAt")
+            .isNull());
+    assertEquals(
+        1,
+        expect(200, "GET", "/statistics?householdId=" + owner.id(), null, member.token(), null)
+            .get("completedSessions")
+            .asInt());
+    expect(404, "POST", "/households/" + owner.id() + "/invitations", null, member.token(), key());
+    expect(
+        404,
+        "PATCH",
+        "/households/" + owner.id(),
+        Map.of("name", "Hijack", "version", 0),
+        member.token(),
+        key());
+    expect(404, "DELETE", "/households/" + owner.id(), null, member.token(), key());
+  }
+
+  @Test
+  void sharedReadsAndPreferencesAreIndividualAndRevocationBlocksReplay() {
+    var owner = user();
+    var member = user();
+    var d = device(owner, "washer");
+    join(owner, member);
+    var session = start(owner, d, "Quick", 15);
+    var events = expect(200, "GET", "/activity", null, member.token(), null).get("items");
+    String event = events.get(0).get("id").asText();
+    expect(200, "POST", "/activity/" + event + "/read", null, member.token(), key());
+    assertFalse(
+        expect(200, "GET", "/activity", null, member.token(), null)
+            .get("items")
+            .get(0)
+            .get("readAt")
+            .isNull());
+    assertTrue(
+        expect(200, "GET", "/activity", null, owner.token(), null)
+            .get("items")
+            .get(0)
+            .get("readAt")
+            .isNull());
+    assertEquals(
+        0,
+        expect(200, "GET", "/state", null, member.token(), null)
+            .get("unreadActivityCount")
+            .asInt());
+    assertEquals(
+        1,
+        expect(200, "GET", "/state", null, owner.token(), null).get("unreadActivityCount").asInt());
+    expect(
+        200,
+        "PATCH",
+        "/households/" + owner.id() + "/membership",
+        Map.of("notificationsEnabled", false),
+        member.token(),
+        key());
+    assertFalse(
+        expect(200, "GET", "/households/" + owner.id(), null, member.token(), null)
+            .get("notificationsEnabled")
+            .asBoolean());
+    assertTrue(
+        expect(200, "GET", "/households/" + owner.id(), null, owner.token(), null)
+            .get("notificationsEnabled")
+            .asBoolean());
+    String replay = key();
+    String path = "/sessions/" + session.get("id").asText() + "/complete";
+    expect(200, "POST", path, null, member.token(), replay);
+    expect(
+        200,
+        "DELETE",
+        "/households/" + owner.id() + "/members/" + member.id(),
+        null,
+        owner.token(),
+        key());
+    assertEquals(
+        1, expect(200, "GET", "/state", null, member.token(), null).get("households").size());
+    assertEquals(
+        0, expect(200, "GET", "/state", null, member.token(), null).get("appliances").size());
+    expect(404, "POST", path, null, member.token(), replay);
+    expect(404, "GET", "/activity?householdId=" + owner.id(), null, member.token(), null);
+  }
+
+  @Test
+  void invitationSingleUseExpiryRevokeAndRetry() {
+    var owner = user();
+    var member = user();
+    var other = user();
+    String token = invitation(owner), request = key();
+    expect(401, "GET", "/household-invitations/" + token, null, null, null);
+    expect(200, "GET", "/household-invitations/" + token, null, member.token(), null);
+    var joined =
+        expect(
+            200,
+            "POST",
+            "/household-invitations/" + token + "/accept",
+            null,
+            member.token(),
+            request);
+    assertEquals(
+        joined,
+        expect(
+            200,
+            "POST",
+            "/household-invitations/" + token + "/accept",
+            null,
+            member.token(),
+            request));
+    expect(409, "POST", "/household-invitations/" + token + "/accept", null, other.token(), key());
+    expect(
+        200,
+        "DELETE",
+        "/households/" + owner.id() + "/members/" + member.id(),
+        null,
+        member.token(),
+        key());
+    expect(
+        409, "POST", "/household-invitations/" + token + "/accept", null, member.token(), request);
+    String revoked = invitation(owner);
+    var invites =
+        expect(200, "GET", "/households/" + owner.id() + "/invitations", null, owner.token(), null);
+    String id =
+        jdbc.queryForObject(
+            "select id from household_invitations where token_hash=?",
+            String.class,
+            org.adancau.doneapi.common.Crypto.hash(revoked));
+    expect(
+        200,
+        "DELETE",
+        "/households/" + owner.id() + "/invitations/" + id,
+        null,
+        owner.token(),
+        key());
+    expect(409, "GET", "/household-invitations/" + revoked, null, other.token(), null);
+    String expired = invitation(owner);
+    clock.advance(7 * 86400);
+    owner = renew(owner);
+    other = renew(other);
+    expect(409, "GET", "/household-invitations/" + expired, null, other.token(), null);
+  }
+
+  @Test
+  void concurrentSharedCompletionHasOneEvent() throws Exception {
+    var owner = user();
+    var member = user();
+    join(owner, member);
+    var session = start(owner, device(owner, "washer"), "Quick", 20);
+    String path = "/sessions/" + session.get("id").asText() + "/complete";
+    var first = CompletableFuture.supplyAsync(() -> call("POST", path, null, owner.token(), key()));
+    var second =
+        CompletableFuture.supplyAsync(() -> call("POST", path, null, member.token(), key()));
+    assertEquals(200, first.get().status());
+    assertEquals(200, second.get().status());
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "select count(*) from activity_events where session_id=? and kind='finished'",
+            Long.class,
+            session.get("id").asText()));
+  }
+
+  @Test
+  void sharedMemberCanPublishStatusWithoutLeakingPrivateShares() {
+    var owner = user();
+    var member = user();
+    join(owner, member);
+    var session = start(owner, device(owner, "washer"), "Quick", 20);
+    var share =
+        expect(
+            201,
+            "POST",
+            "/sessions/" + session.get("id").asText() + "/share",
+            null,
+            member.token(),
+            key());
+    assertEquals(1, expect(200, "GET", "/session-shares", null, member.token(), null).size());
+    expect(
+        200,
+        "DELETE",
+        "/session-shares/" + share.get("shareUrl").asText().replaceAll("^.*/share/", ""),
+        null,
+        member.token(),
+        key());
+    assertEquals(0, expect(200, "GET", "/session-shares", null, owner.token(), null).size());
+  }
+
+  void registerPush(User user, String id, String token) {
+    expect(
+        200,
+        "PUT",
+        "/devices/" + id,
+        Map.of("token", token, "environment", "sandbox"),
+        user.token(),
+        null);
+  }
+
+  @Test
+  void pushQueuesBothMembersAndHonorsPrefsRemovalAndSessionLogout() {
+    when(push.enabled()).thenReturn(true);
+    when(push.send(anyString(), anyString(), anyMap(), anyString()))
+        .thenReturn(new org.adancau.doneapi.push.PushGateway.Result(true, false, false));
+    var owner = user();
+    var member = user();
+    join(owner, member);
+    String first = key(), second = key();
+    registerPush(owner, first, "a".repeat(64));
+    registerPush(member, second, "b".repeat(64));
+    var d = device(owner, "washer");
+    var session = start(owner, d, "Quick", 20);
+    assertEquals(
+        2,
+        jdbc.queryForObject(
+            "select count(*) from push_deliveries where kind='started'", Long.class));
+    assertEquals(
+        2,
+        jdbc.queryForObject(
+            "select count(*) from push_deliveries where kind='overdue_120'", Long.class));
+    pushes.deliver();
+    verify(push, times(2)).send(anyString(), anyString(), anyMap(), anyString());
+    reset(push);
+    when(push.enabled()).thenReturn(true);
+    when(push.send(anyString(), anyString(), anyMap(), anyString()))
+        .thenReturn(new org.adancau.doneapi.push.PushGateway.Result(true, false, false));
+    expect(
+        200,
+        "PATCH",
+        "/households/" + owner.id() + "/membership",
+        Map.of("notificationsEnabled", false),
+        member.token(),
+        key());
+    action(owner, session, "complete");
+    pushes.deliver();
+    verify(push, times(1)).send(anyString(), eq("a".repeat(64)), anyMap(), anyString());
+    action(owner, session, "collect");
+    expect(204, "POST", "/auth/logout", null, owner.token(), null);
+    pushes.deliver();
+    verify(push, times(1)).send(anyString(), anyString(), anyMap(), anyString());
+  }
+
+  @Test
+  void pushRevokedMembershipAndOldCountdownGenerationNeverDeliver() {
+    when(push.enabled()).thenReturn(true);
+    when(push.send(anyString(), anyString(), anyMap(), anyString()))
+        .thenReturn(new org.adancau.doneapi.push.PushGateway.Result(true, false, false));
+    var owner = user();
+    var member = user();
+    join(owner, member);
+    registerPush(owner, key(), "a".repeat(64));
+    registerPush(member, key(), "b".repeat(64));
+    var s = start(owner, device(owner, "washer"), "Quick", 20);
+    pushes.deliver();
+    clearInvocations(push);
+    expect(
+        200,
+        "POST",
+        "/sessions/" + s.get("id").asText() + "/extend",
+        Map.of("minutes", 10),
+        owner.token(),
+        key());
+    clock.advance(20 * 60);
+    owner = renew(owner);
+    // Old due job is removed on extension; only the new halfway can now be delivered.
+    pushes.deliver();
+    verify(push, never())
+        .send(
+            anyString(),
+            anyString(),
+            argThat(p -> p.toString().contains("E timpul să verifici")),
+            anyString());
+    clearInvocations(push);
+    expect(
+        200,
+        "DELETE",
+        "/households/" + owner.id() + "/members/" + member.id(),
+        null,
+        owner.token(),
+        key());
+    clock.advance(10 * 60);
+    pushes.deliver();
+    verify(push, never()).send(anyString(), eq("b".repeat(64)), anyMap(), anyString());
+  }
+
+  @Test
+  void deletingMemberPreservesSharedHomeAndDeletingOwnerRemovesOnlyOwnedData() {
+    var owner = user();
+    var member = user();
+    join(owner, member);
+    var d = device(owner, "washer");
+    start(owner, d, "Quick", 20);
+    expect(204, "DELETE", "/me", Map.of("password", PASSWORD), member.token(), null);
+    assertEquals(
+        1,
+        expect(200, "GET", "/households/" + owner.id(), null, owner.token(), null)
+            .get("memberCount")
+            .asInt());
+    var another = user();
+    join(owner, another);
+    expect(204, "DELETE", "/me", Map.of("password", PASSWORD), owner.token(), null);
+    assertEquals(
+        1, expect(200, "GET", "/state", null, another.token(), null).get("households").size());
+    assertEquals(
+        0, expect(200, "GET", "/state", null, another.token(), null).get("appliances").size());
+  }
+
+  @Test
+  void twoPeopleCannotRedeemTheSameInvitationConcurrently() throws Exception {
+    var owner = user();
+    var first = user();
+    var second = user();
+    String token = invitation(owner);
+    var a =
+        CompletableFuture.supplyAsync(
+            () ->
+                call(
+                    "POST",
+                    "/household-invitations/" + token + "/accept",
+                    null,
+                    first.token(),
+                    key()));
+    var b =
+        CompletableFuture.supplyAsync(
+            () ->
+                call(
+                    "POST",
+                    "/household-invitations/" + token + "/accept",
+                    null,
+                    second.token(),
+                    key()));
+    var statuses = new ArrayList<Integer>(List.of(a.get().status(), b.get().status()));
+    statuses.sort(Integer::compareTo);
+    assertEquals(List.of(200, 409), statuses);
+    assertEquals(
+        2,
+        expect(200, "GET", "/households/" + owner.id() + "/members", null, owner.token(), null)
+            .size());
+  }
+
+  @Test
+  void revokedMemberCannotReplayCachedActivityReadOrDeletedApplianceResult() {
+    var owner = user();
+    var member = user();
+    join(owner, member);
+    var d = device(owner, "washer");
+    start(owner, d, "Quick", 20);
+    String event =
+        expect(200, "GET", "/activity", null, member.token(), null)
+            .get("items")
+            .get(0)
+            .get("id")
+            .asText();
+    String readKey = key(), deleteKey = key();
+    expect(200, "POST", "/activity/" + event + "/read", null, member.token(), readKey);
+    expect(
+        200,
+        "DELETE",
+        "/households/" + owner.id() + "/members/" + member.id(),
+        null,
+        owner.token(),
+        key());
+    expect(404, "POST", "/activity/" + event + "/read", null, member.token(), readKey);
+    join(owner, member);
+    expect(200, "DELETE", "/appliances/" + d.get("id").asText(), null, member.token(), deleteKey);
+    expect(200, "DELETE", "/appliances/" + d.get("id").asText(), null, member.token(), deleteKey);
+    expect(
+        200,
+        "DELETE",
+        "/households/" + owner.id() + "/members/" + member.id(),
+        null,
+        owner.token(),
+        key());
+    expect(404, "DELETE", "/appliances/" + d.get("id").asText(), null, member.token(), deleteKey);
+  }
+
+  @Test
+  void pushRetriesArePerDeviceAndInvalidTokensAreRemoved() {
+    when(push.enabled()).thenReturn(true);
+    when(push.send(anyString(), eq("a".repeat(64)), anyMap(), anyString()))
+        .thenReturn(new org.adancau.doneapi.push.PushGateway.Result(false, true, false));
+    when(push.send(anyString(), eq("b".repeat(64)), anyMap(), anyString()))
+        .thenReturn(new org.adancau.doneapi.push.PushGateway.Result(false, false, true));
+    var owner = user();
+    var member = user();
+    join(owner, member);
+    registerPush(owner, key(), "a".repeat(64));
+    registerPush(member, key(), "b".repeat(64));
+    start(owner, device(owner, "washer"), "Quick", 20);
+    pushes.deliver();
+    assertEquals(1, jdbc.queryForObject("select count(*) from push_devices", Long.class));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "select attempts from push_deliveries where kind='started'", Long.class));
+    when(push.send(anyString(), eq("b".repeat(64)), anyMap(), anyString()))
+        .thenReturn(new org.adancau.doneapi.push.PushGateway.Result(true, false, false));
+    clock.advance(16);
+    pushes.deliver();
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "select count(*) from push_deliveries where kind='started' and sent_at is not null",
+            Long.class));
+  }
+
+  @Test
+  void invitationLandingDoesNotDiscloseHomeAndLoadsItsPublicAssets() throws Exception {
+    var owner = user();
+    String token = invitation(owner);
+    for (var path : List.of("/invite/" + token, "/site/invite.js", "/site/invite.css")) {
+      var response =
+          http.send(
+              HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build(),
+              HttpResponse.BodyHandlers.ofString());
+      assertEquals(200, response.statusCode(), path);
+      if (path.startsWith("/invite/")) {
+        assertFalse(response.body().contains(owner.email()));
+        assertEquals("no-store", response.headers().firstValue("Cache-Control").orElse(""));
+      }
+    }
+  }
+
+  @Test
+  void sharedPushLanguageUsesEachRecipientsPreference() {
+    when(push.enabled()).thenReturn(true);
+    when(push.send(anyString(), anyString(), anyMap(), anyString()))
+        .thenReturn(new org.adancau.doneapi.push.PushGateway.Result(true, false, false));
+    var owner = user();
+    var member = user();
+    join(owner, member);
+    expect(200, "PATCH", "/me", Map.of("language", "it"), member.token(), key());
+    registerPush(owner, key(), "a".repeat(64));
+    registerPush(member, key(), "b".repeat(64));
+    var d = device(owner, "washer");
+    var session = start(owner, d, "Quick", 10);
+    pushes.deliver();
+    var recipient = org.mockito.ArgumentCaptor.forClass(String.class);
+    var payload = org.mockito.ArgumentCaptor.forClass(Map.class);
+    verify(push, times(2)).send(anyString(), recipient.capture(), payload.capture(), anyString());
+    int idx = recipient.getAllValues().indexOf("b".repeat(64));
+    var aps = (Map<?, ?>) payload.getAllValues().get(idx).get("aps");
+    var alert = (Map<?, ?>) aps.get("alert");
+    assertEquals(
+        expect(200, "GET", "/localizations/it", null, null, null).get("Timer pornit.").asText(),
+        alert.get("title"));
+    clearInvocations(push);
+    clock.advance(300);
+    pushes.deliver();
+    payload = org.mockito.ArgumentCaptor.forClass(Map.class);
+    verify(push, times(2)).send(anyString(), anyString(), payload.capture(), anyString());
+    assertEquals(2, payload.getAllValues().size());
+    assertEquals(
+        2,
+        jdbc.queryForObject(
+            "select count(*) from push_deliveries where kind='halfway'", Long.class));
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "select count(*) from push_deliveries where kind='five_minutes'", Long.class));
   }
 }

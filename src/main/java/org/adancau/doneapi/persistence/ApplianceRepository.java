@@ -13,6 +13,10 @@ public interface ApplianceRepository extends JpaRepository<ApplianceEntity, UUID
 
   long countByUserId(UUID userId);
 
+  @Query("select a from ApplianceEntity a where a.householdId in :homes order by a.createdAt,a.id")
+  List<ApplianceEntity> visible(
+      @org.springframework.data.repository.query.Param("homes") Collection<UUID> homes);
+
   long countByUserIdAndHouseholdId(UUID userId, UUID householdId);
 
   boolean existsByUserIdAndHouseholdIdAndNameIgnoreCase(UUID userId, UUID householdId, String name);

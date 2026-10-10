@@ -14,16 +14,22 @@ public class HouseholdService {
   private final ApplianceRepository appliances;
   private final MutationService mutations;
   private final Clock clock;
+  private final HouseholdAccess access;
+  private final HouseholdMemberRepository members;
 
   public HouseholdService(
       HouseholdRepository homes,
       ApplianceRepository appliances,
       MutationService mutations,
-      Clock clock) {
+      Clock clock,
+      HouseholdAccess access,
+      HouseholdMemberRepository members) {
     this.homes = homes;
     this.appliances = appliances;
     this.mutations = mutations;
     this.clock = clock;
+    this.access = access;
+    this.members = members;
   }
 
   public HouseholdEntity owned(UUID owner, UUID id) {
@@ -51,23 +57,31 @@ public class HouseholdService {
   }
 
   private HouseholdDtos.HouseholdView view(HouseholdEntity h) {
+    return view(h, h.getUserId());
+  }
+
+  private HouseholdDtos.HouseholdView view(HouseholdEntity h, UUID viewer) {
     return new HouseholdDtos.HouseholdView(
         h.getId(),
         h.getName(),
         h.getLocalizationKey(),
         appliances.countByUserIdAndHouseholdId(h.getUserId(), h.getId()),
         h.getCreatedAt(),
-        h.getVersion(), h.getUserId());
+        h.getVersion(),
+        h.getUserId(),
+        h.getUserId().equals(viewer) ? "owner" : "member",
+        1 + members.countByHouseholdId(h.getId()),
+        access.notifications(viewer, h.getId()));
   }
 
   @Transactional(readOnly = true)
   public List<HouseholdDtos.HouseholdView> list(UUID owner) {
-    return homes.findByUserIdOrderByCreatedAtAscIdAsc(owner).stream().map(this::view).toList();
+    return homes.visible(owner).stream().map(h -> view(h, owner)).toList();
   }
 
   @Transactional(readOnly = true)
   public HouseholdDtos.HouseholdView get(UUID owner, UUID id) {
-    return view(owned(owner, id));
+    return view(access.home(owner, id), owner);
   }
 
   public HouseholdDtos.HouseholdView create(UUID owner, UUID key, HouseholdDtos.CreateHousehold r) {
@@ -78,7 +92,7 @@ public class HouseholdService {
         r,
         HouseholdDtos.HouseholdView.class,
         u -> {
-          if (homes.countByUserId(owner) >= 20)
+          if (access.homes(owner).size() >= 20)
             throw ApiException.conflict("household_limit", "Maximum 20 households.");
           String name = Names.clean(r.name(), 60, true);
           if (homes.existsByUserIdAndNameIgnoreCase(owner, name))

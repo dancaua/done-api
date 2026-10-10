@@ -6,8 +6,8 @@
     "description" : "Native Apple API. Email/password JWT and native Sign in with Apple. All timestamps UTC; history is server-owned. Durable activity events; APNs transport is not part of this phase."
   },
   "servers" : [ {
-    "url" : "http://127.0.0.1:8080",
-    "description" : "Local development; configure PUBLIC_ORIGIN for deployed links."
+    "description" : "Local development; configure PUBLIC_ORIGIN for deployed links.",
+    "url" : "http://127.0.0.1:8080"
   } ],
   "components" : {
     "securitySchemes" : {
@@ -250,10 +250,10 @@
           },
           "programs" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ProgramView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
@@ -327,10 +327,10 @@
           },
           "programs" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/Suggestion"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
@@ -485,40 +485,40 @@
           },
           "households" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/HouseholdView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
           },
           "appliances" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ApplianceView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
           },
           "sessions" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/SessionView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
           },
           "activity" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ActivityView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
@@ -618,20 +618,20 @@
           },
           "usagePerDay" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/Day"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
           },
           "recentSessions" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/SessionView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
@@ -688,10 +688,135 @@
             }, {
               "type" : "null"
             } ]
+          },
+          "role" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "memberCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "notificationsEnabled" : {
+            "type" : "boolean"
           }
         },
         "additionalProperties" : false,
-        "required" : [ "id", "name", "localizationKey", "applianceCount", "createdAt", "version", "ownerId" ]
+        "required" : [ "id", "name", "localizationKey", "applianceCount", "createdAt", "version", "ownerId", "role", "memberCount", "notificationsEnabled" ]
+      },
+      "Invitation" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "householdId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "householdName" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "localizationKey" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "ownerName" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "inviteUrl" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "expiresAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "id", "householdId", "householdName", "localizationKey", "ownerName", "inviteUrl", "expiresAt" ]
+      },
+      "InviteSummary" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "createdAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "expiresAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "used" : {
+            "type" : "boolean"
+          },
+          "revoked" : {
+            "type" : "boolean"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "id", "createdAt", "expiresAt", "used", "revoked" ]
+      },
+      "Joined" : {
+        "type" : "object",
+        "properties" : {
+          "householdId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "householdId" ]
       },
       "LiveActivityShareDTO" : {
         "type" : "object",
@@ -761,10 +886,10 @@
           },
           "arguments" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "type" : "string"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
@@ -798,6 +923,46 @@
         "additionalProperties" : false,
         "required" : [ "name" ]
       },
+      "Member" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "anyOf" : [ {
+              "format" : "uuid",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "displayName" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "role" : {
+            "anyOf" : [ {
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "joinedAt" : {
+            "anyOf" : [ {
+              "format" : "date-time",
+              "type" : "string"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "notificationsEnabled" : {
+            "type" : "boolean"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "userId", "displayName", "role", "joinedAt", "notificationsEnabled" ]
+      },
       "MoveAppliance" : {
         "type" : "object",
         "properties" : {
@@ -829,10 +994,10 @@
         "type" : "object",
         "properties" : {
           "items" : {
-            "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/ActivityView"
-            }
+            },
+            "type" : "array"
           },
           "page" : {
             "format" : "int32",
@@ -857,10 +1022,10 @@
         "type" : "object",
         "properties" : {
           "items" : {
-            "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/SessionView"
-            }
+            },
+            "type" : "array"
           },
           "page" : {
             "format" : "int32",
@@ -1055,6 +1220,20 @@
         "additionalProperties" : false,
         "required" : [ "email", "password", "displayName" ]
       },
+      "Registration" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "maxLength" : 256
+          },
+          "environment" : {
+            "type" : "string"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "token", "environment" ]
+      },
       "RenameAppliance" : {
         "type" : "object",
         "properties" : {
@@ -1247,6 +1426,16 @@
         "additionalProperties" : false,
         "required" : [ "id", "applianceId", "programId", "programName", "minutes", "mode", "status", "startedAt", "expectedEnd", "completedAt", "collectedAt", "canceledAt", "elapsedSeconds", "version", "serverTime", "sourceProgramId", "programSnapshot", "measuredProgram", "timingMode", "isOpen" ]
       },
+      "Settings" : {
+        "type" : "object",
+        "properties" : {
+          "notificationsEnabled" : {
+            "type" : "boolean"
+          }
+        },
+        "additionalProperties" : false,
+        "required" : [ "notificationsEnabled" ]
+      },
       "SharedSnapshot" : {
         "type" : "object",
         "properties" : {
@@ -1346,30 +1535,30 @@
           },
           "households" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/HouseholdView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
           },
           "appliances" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ApplianceView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
           },
           "recentSessions" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/SessionView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
@@ -1379,10 +1568,10 @@
           },
           "recentActivity" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/ActivityView"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
@@ -1515,10 +1704,10 @@
           },
           "usagePerDay" : {
             "anyOf" : [ {
-              "type" : "array",
               "items" : {
                 "$ref" : "#/components/schemas/Day"
-              }
+              },
+              "type" : "array"
             }, {
               "type" : "null"
             } ]
@@ -1757,14 +1946,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -1786,14 +1975,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -1825,14 +2014,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -1845,27 +2034,27 @@
           "writerCapability" : [ ]
         } ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "id",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
         } ],
         "responses" : {
           "204" : {
             "description" : "Success"
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -1878,26 +2067,26 @@
           "writerCapability" : [ ]
         } ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "token",
           "schema" : {
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "token"
         } ],
         "responses" : {
           "204" : {
             "description" : "Success"
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -1906,12 +2095,12 @@
         "tags" : [ "Sharing" ],
         "security" : [ ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "token",
           "schema" : {
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "token"
         } ],
         "responses" : {
           "200" : {
@@ -1925,14 +2114,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -1953,12 +2142,12 @@
           }
         },
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "token",
           "schema" : {
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "token"
         } ],
         "responses" : {
           "200" : {
@@ -1972,14 +2161,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -1992,31 +2181,31 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : false,
-          "in" : "query",
-          "name" : "page",
           "schema" : {
             "format" : "int32",
             "type" : "integer",
             "default" : 0
-          }
-        }, {
+          },
           "required" : false,
           "in" : "query",
-          "name" : "size",
+          "name" : "page"
+        }, {
           "schema" : {
             "format" : "int32",
             "type" : "integer",
             "default" : 20
-          }
-        }, {
+          },
           "required" : false,
           "in" : "query",
-          "name" : "householdId",
+          "name" : "size"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : false,
+          "in" : "query",
+          "name" : "householdId"
         } ],
         "responses" : {
           "200" : {
@@ -2030,14 +2219,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2050,21 +2239,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
+          "name" : "Idempotency-Key"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : false,
           "in" : "query",
-          "name" : "householdId",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "householdId"
         } ],
         "responses" : {
           "200" : {
@@ -2078,14 +2267,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2098,21 +2287,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -2126,14 +2315,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2146,13 +2335,13 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : false,
-          "in" : "query",
-          "name" : "householdId",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : false,
+          "in" : "query",
+          "name" : "householdId"
         } ],
         "responses" : {
           "200" : {
@@ -2160,23 +2349,23 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/ApplianceView"
-                  }
+                  },
+                  "type" : "array"
                 }
               }
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -2197,13 +2386,13 @@
           }
         },
         "parameters" : [ {
-          "required" : true,
-          "in" : "header",
-          "name" : "Idempotency-Key",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "201" : {
@@ -2217,14 +2406,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2237,21 +2426,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -2265,14 +2454,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -2283,13 +2472,13 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "id",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
         } ],
         "responses" : {
           "200" : {
@@ -2303,14 +2492,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -2331,21 +2520,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -2359,14 +2548,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2389,21 +2578,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -2417,14 +2606,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2447,21 +2636,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -2475,14 +2664,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2505,21 +2694,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "201" : {
@@ -2533,14 +2722,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2553,29 +2742,29 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "id",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "path",
-          "name" : "programId",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "programId"
         }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -2589,14 +2778,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -2617,29 +2806,29 @@
           }
         },
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "id",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "path",
-          "name" : "programId",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "programId"
         }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -2653,14 +2842,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2673,31 +2862,31 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "id",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
         }, {
-          "required" : false,
-          "in" : "query",
-          "name" : "page",
           "schema" : {
             "format" : "int32",
             "type" : "integer",
             "default" : 0
-          }
-        }, {
+          },
           "required" : false,
           "in" : "query",
-          "name" : "size",
+          "name" : "page"
+        }, {
           "schema" : {
             "format" : "int32",
             "type" : "integer",
             "default" : 20
-          }
+          },
+          "required" : false,
+          "in" : "query",
+          "name" : "size"
         } ],
         "responses" : {
           "200" : {
@@ -2711,14 +2900,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -2739,21 +2928,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "201" : {
@@ -2767,14 +2956,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2806,14 +2995,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2835,14 +3024,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2874,14 +3063,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2902,22 +3091,22 @@
           }
         },
         "responses" : {
-          "default" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Error; code is stable and independent of language."
-          },
           "202" : {
             "description" : "Success",
             "content" : {
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/RecoveryAccepted"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
                 }
               }
             }
@@ -2952,14 +3141,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -2976,14 +3165,14 @@
             "description" : "Success"
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3000,14 +3189,14 @@
             "description" : "Success"
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3039,14 +3228,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3078,14 +3267,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3110,14 +3299,14 @@
             "description" : "Success"
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3135,23 +3324,196 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/CatalogItem"
-                  }
+                  },
+                  "type" : "array"
                 }
               }
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{id}" : {
+      "delete" : {
+        "operationId" : "PushController_delete_1605535465",
+        "tags" : [ "Push" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : { }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "operationId" : "PushController_register_1605535465",
+        "tags" : [ "Push" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Registration"
+              }
+            }
+          }
+        },
+        "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : true,
+                  "type" : "object"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/household-invitations/{token}" : {
+      "get" : {
+        "operationId" : "CollaborationController_preview_2170331980",
+        "tags" : [ "Collaboration" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "token"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Invitation"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/household-invitations/{token}/accept" : {
+      "post" : {
+        "operationId" : "CollaborationController_accept_385606955",
+        "tags" : [ "Collaboration" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "token"
+        }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Joined"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         }
       }
@@ -3169,23 +3531,23 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/HouseholdView"
-                  }
+                  },
+                  "type" : "array"
                 }
               }
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -3206,13 +3568,13 @@
           }
         },
         "parameters" : [ {
-          "required" : true,
-          "in" : "header",
-          "name" : "Idempotency-Key",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "201" : {
@@ -3226,14 +3588,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3246,21 +3608,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -3274,14 +3636,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -3292,13 +3654,13 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "id",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
         } ],
         "responses" : {
           "200" : {
@@ -3312,14 +3674,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -3340,21 +3702,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -3368,14 +3730,316 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{id}/invitations" : {
+      "get" : {
+        "operationId" : "CollaborationController_invites_1941097469",
+        "tags" : [ "Collaboration" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/InviteSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "operationId" : "CollaborationController_create_1941097469",
+        "tags" : [ "Collaboration" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
+        }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Invitation"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{id}/invitations/{invite}" : {
+      "delete" : {
+        "operationId" : "CollaborationController_revoke_3563783051",
+        "tags" : [ "Collaboration" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
+        }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "invite"
+        }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MutationResult"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{id}/members" : {
+      "get" : {
+        "operationId" : "CollaborationController_members_2288554652",
+        "tags" : [ "Collaboration" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Member"
+                  },
+                  "type" : "array"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{id}/members/{member}" : {
+      "delete" : {
+        "operationId" : "CollaborationController_remove_2251052635",
+        "tags" : [ "Collaboration" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
+        }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "member"
+        }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MutationResult"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{id}/membership" : {
+      "patch" : {
+        "operationId" : "CollaborationController_settings_20884339",
+        "tags" : [ "Collaboration" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Settings"
+              }
+            }
+          }
+        },
+        "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
+        }, {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MutationResult"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         }
       }
@@ -3386,12 +4050,12 @@
         "tags" : [ "Localization" ],
         "security" : [ ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "language",
           "schema" : {
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "language"
         } ],
         "responses" : {
           "200" : {
@@ -3406,14 +4070,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3440,14 +4104,14 @@
             "description" : "Success"
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -3469,14 +4133,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       },
@@ -3497,13 +4161,13 @@
           }
         },
         "parameters" : [ {
-          "required" : true,
-          "in" : "header",
-          "name" : "Idempotency-Key",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -3517,14 +4181,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3548,14 +4212,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3589,14 +4253,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3623,14 +4287,14 @@
             "description" : "Success"
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3653,14 +4317,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3678,23 +4342,23 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/LiveActivityShareDTO"
-                  }
+                  },
+                  "type" : "array"
                 }
               }
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3707,20 +4371,20 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "token",
           "schema" : {
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
-          "in" : "header",
-          "name" : "Idempotency-Key",
+          "in" : "path",
+          "name" : "token"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "header",
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -3734,14 +4398,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3754,13 +4418,13 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "id",
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "id"
         } ],
         "responses" : {
           "200" : {
@@ -3774,14 +4438,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3804,21 +4468,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -3832,14 +4496,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3852,21 +4516,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -3880,14 +4544,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3900,21 +4564,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -3928,14 +4592,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -3948,21 +4612,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -3976,14 +4640,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4006,21 +4670,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -4034,14 +4698,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4064,21 +4728,21 @@
           }
         },
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "200" : {
@@ -4092,14 +4756,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4112,21 +4776,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "201" : {
@@ -4140,14 +4804,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4160,21 +4824,21 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "required" : true,
           "in" : "path",
-          "name" : "id",
+          "name" : "id"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : true,
           "in" : "header",
-          "name" : "Idempotency-Key",
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
+          "name" : "Idempotency-Key"
         } ],
         "responses" : {
           "201" : {
@@ -4188,14 +4852,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4219,14 +4883,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4239,30 +4903,30 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : false,
-          "in" : "query",
-          "name" : "period",
           "schema" : {
             "type" : "string",
             "enum" : [ "week", "month", "year" ],
             "default" : "week"
-          }
-        }, {
+          },
           "required" : false,
           "in" : "query",
-          "name" : "date",
+          "name" : "period"
+        }, {
           "schema" : {
             "format" : "date",
             "type" : "string"
-          }
-        }, {
+          },
           "required" : false,
           "in" : "query",
-          "name" : "householdId",
+          "name" : "date"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : false,
+          "in" : "query",
+          "name" : "householdId"
         } ],
         "responses" : {
           "200" : {
@@ -4276,14 +4940,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4296,22 +4960,22 @@
           "bearerAuth" : [ ]
         } ],
         "parameters" : [ {
-          "required" : false,
-          "in" : "query",
-          "name" : "period",
           "schema" : {
             "type" : "string",
             "enum" : [ "week", "month", "year" ],
             "default" : "week"
-          }
-        }, {
+          },
           "required" : false,
           "in" : "query",
-          "name" : "householdId",
+          "name" : "period"
+        }, {
           "schema" : {
             "format" : "uuid",
             "type" : "string"
-          }
+          },
+          "required" : false,
+          "in" : "query",
+          "name" : "householdId"
         } ],
         "responses" : {
           "200" : {
@@ -4325,14 +4989,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4354,14 +5018,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4383,14 +5047,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4412,14 +5076,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4441,14 +5105,51 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
+          }
+        }
+      }
+    },
+    "/invite/{token}" : {
+      "get" : {
+        "operationId" : "PublicSiteController_invite_3065631432",
+        "tags" : [ "PublicSite" ],
+        "security" : [ ],
+        "parameters" : [ {
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "token"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "text/html" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "Error; code is stable and independent of language.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         }
       }
@@ -4470,14 +5171,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4499,14 +5200,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4528,14 +5229,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4546,12 +5247,12 @@
         "tags" : [ "PublicSite" ],
         "security" : [ ],
         "parameters" : [ {
-          "required" : true,
-          "in" : "path",
-          "name" : "token",
           "schema" : {
             "type" : "string"
-          }
+          },
+          "required" : true,
+          "in" : "path",
+          "name" : "token"
         } ],
         "responses" : {
           "200" : {
@@ -4565,14 +5266,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4594,14 +5295,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }
@@ -4623,14 +5324,14 @@
             }
           },
           "default" : {
+            "description" : "Error; code is stable and independent of language.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Problem"
                 }
               }
-            },
-            "description" : "Error; code is stable and independent of language."
+            }
           }
         }
       }

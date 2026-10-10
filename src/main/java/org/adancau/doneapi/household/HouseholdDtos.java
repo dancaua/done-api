@@ -9,8 +9,7 @@ public final class HouseholdDtos {
 
   public record CreateHousehold(@NotBlank String name) {}
 
-  public record RenameHousehold(
-      @NotBlank String name, @NotNull @PositiveOrZero Long version) {}
+  public record RenameHousehold(@NotBlank String name, @NotNull @PositiveOrZero Long version) {}
 
   public record HouseholdView(
       UUID id,
@@ -18,5 +17,9 @@ public final class HouseholdDtos {
       String localizationKey,
       long applianceCount,
       Instant createdAt,
-      long version, UUID ownerId) {}
+      long version,
+      UUID ownerId,
+      String role,
+      long memberCount,
+      boolean notificationsEnabled) {}
 }

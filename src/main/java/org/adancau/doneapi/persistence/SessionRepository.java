@@ -20,10 +20,25 @@ public interface SessionRepository extends JpaRepository<SessionEntity, UUID> {
       findByUserIdAndCompletedAtGreaterThanEqualAndCompletedAtLessThanAndCanceledAtIsNull(
           UUID userId, Instant start, Instant end);
 
-  List<SessionEntity> findByUserIdAndCompletedAtGreaterThanEqualAndCompletedAtLessThanEqualAndCanceledAtIsNull(
-      UUID userId, Instant start, Instant end);
+  List<SessionEntity>
+      findByUserIdAndCompletedAtGreaterThanEqualAndCompletedAtLessThanEqualAndCanceledAtIsNull(
+          UUID userId, Instant start, Instant end);
 
   List<SessionEntity> findByUserIdOrderByStartedAtDescIdDesc(UUID userId, Pageable page);
+
+  @Query(
+      "select s from SessionEntity s where s.applianceId in (select a.id from ApplianceEntity a"
+          + " where a.householdId in :homes) order by s.startedAt desc,s.id desc")
+  List<SessionEntity> visible(@Param("homes") Collection<UUID> homes, Pageable page);
+
+  @Query(
+      "select s from SessionEntity s where s.applianceId in (select a.id from ApplianceEntity a"
+          + " where a.householdId in :homes) and s.completedAt>=:start and s.completedAt<:end and"
+          + " s.canceledAt is null")
+  List<SessionEntity> visibleCompleted(
+      @Param("homes") Collection<UUID> homes,
+      @Param("start") Instant start,
+      @Param("end") Instant end);
 
   @Query("select s.id from SessionEntity s where s.nextEventAt<=:now order by s.nextEventAt,s.id")
   List<UUID> findDue(@Param("now") Instant now, Pageable page);

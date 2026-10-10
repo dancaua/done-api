@@ -1,0 +1,5 @@
+import {catalogs,languageNames} from '/localizations.js';
+const node=id=>document.getElementById(id);let language=navigator.languages?.map(p=>p.slice(0,2)).find(l=>catalogs[l])??'en';
+for(const [value,name] of Object.entries(languageNames)){const option=document.createElement('option');option.value=value;option.textContent=name;node('language').append(option);}node('language').value=language;
+const token=location.pathname.split('/').pop();if(/^[A-Za-z0-9_-]{43}$/.test(token))node('open').href=`done://household-invite/${token}`;
+function render(){document.documentElement.lang=language;const t=k=>catalogs[language][k]??catalogs.en[k];for(const [id,key] of [['title','home.share.title'],['body','home.invite.browser'],['open','home.invite.open'],['hint','home.invite.browserHint'],['download','home.invite.download']])node(id).textContent=t(key);node('language').setAttribute('aria-label',t('share.language'));}node('language').addEventListener('change',()=>{language=node('language').value;render();});render();

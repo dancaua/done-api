@@ -44,7 +44,8 @@ public class StateService {
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   public StateDtos.Snapshot snapshot(UUID owner) {
     var user = users.findById(owner).orElseThrow(ApiException::unauthorized);
-    var recent = sessions.findByUserIdOrderByStartedAtDescIdDesc(owner, PageRequest.of(0, 101));
+    var homeIds = households.list(owner).stream().map(h -> h.id()).toList();
+    var recent = sessions.visible(homeIds, PageRequest.of(0, 101));
     return new StateDtos.Snapshot(
         user.getRevision(),
         clock.instant(),
@@ -53,13 +54,10 @@ public class StateService {
         appliances.list(owner),
         recent.stream().limit(100).map(views::session).toList(),
         recent.size() > 100,
-        activity
-            .findByUserIdOrderByOccurredAtDescIdDesc(owner, PageRequest.of(0, 100))
-            .getContent()
-            .stream()
-            .map(views::activity)
+        activity.visible(homeIds, PageRequest.of(0, 100)).getContent().stream()
+            .map(e -> views.activity(e, owner))
             .toList(),
-        activity.countByUserIdAndReadAtIsNull(owner));
+        activity.unreadVisible(owner.toString(), homeIds.stream().map(UUID::toString).toList()));
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -71,14 +69,16 @@ public class StateService {
         userViews.view(user),
         households.list(owner),
         appliances.list(owner),
-        sessions.findByUserIdOrderByStartedAtDescIdDesc(owner, Pageable.unpaged()).stream()
+        sessions
+            .visible(households.list(owner).stream().map(h -> h.id()).toList(), Pageable.unpaged())
+            .stream()
             .map(views::session)
             .toList(),
         activity
-            .findByUserIdOrderByOccurredAtDescIdDesc(owner, Pageable.unpaged())
+            .visible(households.list(owner).stream().map(h -> h.id()).toList(), Pageable.unpaged())
             .getContent()
             .stream()
-            .map(views::activity)
+            .map(e -> views.activity(e, owner))
             .toList());
   }
 }

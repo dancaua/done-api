@@ -17,6 +17,7 @@ public class ApplianceService {
   private final MutationService mutations;
   private final DomainViews views;
   private final Clock clock;
+  private final org.adancau.doneapi.household.HouseholdAccess access;
   private final org.adancau.doneapi.household.HouseholdService households;
 
   public ApplianceService(
@@ -26,6 +27,7 @@ public class ApplianceService {
       MutationService mutations,
       DomainViews views,
       Clock clock,
+      org.adancau.doneapi.household.HouseholdAccess access,
       org.adancau.doneapi.household.HouseholdService households) {
     this.appliances = appliances;
     this.programs = programs;
@@ -33,11 +35,12 @@ public class ApplianceService {
     this.mutations = mutations;
     this.views = views;
     this.clock = clock;
+    this.access = access;
     this.households = households;
   }
 
   public ApplianceEntity owned(UUID owner, UUID id) {
-    return appliances.findByIdAndUserId(id, owner).orElseThrow(ApiException::missing);
+    return access.appliance(owner, id);
   }
 
   private ApplianceDtos.ApplianceView view(ApplianceEntity a) {
@@ -49,7 +52,7 @@ public class ApplianceService {
 
   @Transactional(readOnly = true)
   public List<ApplianceDtos.ApplianceView> list(UUID owner) {
-    return appliances.findByUserIdOrderByCreatedAtAscIdAsc(owner).stream().map(this::view).toList();
+    return appliances.visible(access.homes(owner)).stream().map(this::view).toList();
   }
 
   @Transactional(readOnly = true)
@@ -60,25 +63,37 @@ public class ApplianceService {
   @Transactional(readOnly = true)
   public List<ApplianceDtos.ApplianceView> list(UUID owner, UUID householdId) {
     if (householdId == null) return list(owner);
-    households.owned(owner, householdId);
+    access.home(owner, householdId);
     return appliances
-        .findByUserIdAndHouseholdIdOrderByCreatedAtAscIdAsc(owner, householdId)
+        .findByUserIdAndHouseholdIdOrderByCreatedAtAscIdAsc(
+            access.home(owner, householdId).getUserId(), householdId)
         .stream()
         .map(this::view)
         .toList();
   }
 
   public ApplianceDtos.ApplianceView move(
-      UUID owner, UUID id, UUID key, ApplianceDtos.MoveAppliance r) {
-    return mutations.execute(
-        owner,
+      UUID actor, UUID id, UUID key, ApplianceDtos.MoveAppliance r) {
+    var resource = owned(actor, id);
+    final UUID owner = resource.getUserId();
+    return mutations.executeShared(
+        actor,
+        resource.getHouseholdId(),
         key,
         "appliance.move:" + id,
         r,
         ApplianceDtos.ApplianceView.class,
         u -> {
+          if (!access
+              .appliance(actor, resource.getId())
+              .getHouseholdId()
+              .equals(resource.getHouseholdId()))
+            throw ApiException.conflict("stale_version", "The appliance moved; reload the home.");
           var a = owned(owner, id);
-          households.owned(owner, r.householdId());
+          var destination = access.home(actor, r.householdId());
+          if (!destination.getUserId().equals(owner))
+            throw ApiException.conflict(
+                "different_owner", "Appliances can only move between homes with the same owner.");
           if (a.getVersion() != r.version())
             throw ApiException.conflict("stale_version", "Reload the appliance before moving it.");
           if (!a.getHouseholdId().equals(r.householdId())
@@ -94,14 +109,22 @@ public class ApplianceService {
   }
 
   public ApplianceDtos.ApplianceView notificationSettings(
-      UUID owner, UUID id, UUID key, ApplianceDtos.ApplianceNotificationSettings r) {
-    return mutations.execute(
-        owner,
+      UUID actor, UUID id, UUID key, ApplianceDtos.ApplianceNotificationSettings r) {
+    var resource = owned(actor, id);
+    final UUID owner = resource.getUserId();
+    return mutations.executeShared(
+        actor,
+        resource.getHouseholdId(),
         key,
         "appliance.notifications:" + id,
         r,
         ApplianceDtos.ApplianceView.class,
         u -> {
+          if (!access
+              .appliance(actor, resource.getId())
+              .getHouseholdId()
+              .equals(resource.getHouseholdId()))
+            throw ApiException.conflict("stale_version", "The appliance moved; reload the home.");
           var a = owned(owner, id);
           if (a.getVersion() != r.version())
             throw ApiException.conflict(
@@ -112,9 +135,15 @@ public class ApplianceService {
         });
   }
 
-  public ApplianceDtos.ApplianceView create(UUID owner, UUID key, ApplianceDtos.CreateAppliance r) {
-    return mutations.execute(
-        owner,
+  public ApplianceDtos.ApplianceView create(UUID actor, UUID key, ApplianceDtos.CreateAppliance r) {
+    var homeAccess =
+        r.householdId() == null
+            ? households.defaultHome(actor)
+            : access.home(actor, r.householdId());
+    final UUID owner = homeAccess.getUserId();
+    return mutations.executeShared(
+        actor,
+        homeAccess.getId(),
         key,
         "appliance.create",
         r,
@@ -157,14 +186,22 @@ public class ApplianceService {
   }
 
   public ApplianceDtos.ApplianceView rename(
-      UUID owner, UUID id, UUID key, ApplianceDtos.RenameAppliance r) {
-    return mutations.execute(
-        owner,
+      UUID actor, UUID id, UUID key, ApplianceDtos.RenameAppliance r) {
+    var resource = owned(actor, id);
+    final UUID owner = resource.getUserId();
+    return mutations.executeShared(
+        actor,
+        resource.getHouseholdId(),
         key,
         "appliance.rename:" + id,
         r,
         ApplianceDtos.ApplianceView.class,
         u -> {
+          if (!access
+              .appliance(actor, resource.getId())
+              .getHouseholdId()
+              .equals(resource.getHouseholdId()))
+            throw ApiException.conflict("stale_version", "The appliance moved; reload the home.");
           var a = owned(owner, id);
           if (a.getVersion() != r.version())
             throw ApiException.conflict(
@@ -180,14 +217,36 @@ public class ApplianceService {
         });
   }
 
-  public MutationResult delete(UUID owner, UUID id, UUID key) {
-    return mutations.execute(
-        owner,
+  public MutationResult delete(UUID actor, UUID id, UUID key) {
+    var existing = appliances.findById(id);
+    if (existing.isEmpty()) {
+      UUID home = mutations.receiptHousehold(actor, key);
+      return mutations.executeShared(
+          actor,
+          home,
+          key,
+          "appliance.delete:" + id,
+          Map.of(),
+          MutationResult.class,
+          u -> {
+            throw ApiException.missing();
+          });
+    }
+    var resource = owned(actor, id);
+    final UUID owner = resource.getUserId();
+    return mutations.executeShared(
+        actor,
+        resource.getHouseholdId(),
         key,
         "appliance.delete:" + id,
         Map.of(),
         MutationResult.class,
         u -> {
+          if (!access
+              .appliance(actor, resource.getId())
+              .getHouseholdId()
+              .equals(resource.getHouseholdId()))
+            throw ApiException.conflict("stale_version", "The appliance moved; reload the home.");
           appliances.delete(owned(owner, id));
           appliances.flush();
           return new MutationResult(u.getRevision());
@@ -195,50 +254,87 @@ public class ApplianceService {
   }
 
   public ApplianceDtos.ProgramView createProgram(
-      UUID owner, UUID applianceId, UUID key, ApplianceDtos.ProgramInput r) {
-    return mutations.execute(
-        owner,
+      UUID actor, UUID applianceId, UUID key, ApplianceDtos.ProgramInput r) {
+    var resource = owned(actor, applianceId);
+    final UUID owner = resource.getUserId();
+    return mutations.executeShared(
+        actor,
+        resource.getHouseholdId(),
         key,
         "program.create:" + applianceId,
         r,
         ApplianceDtos.ProgramView.class,
         u -> {
+          if (!access
+              .appliance(actor, resource.getId())
+              .getHouseholdId()
+              .equals(resource.getHouseholdId()))
+            throw ApiException.conflict("stale_version", "The appliance moved; reload the home.");
           owned(owner, applianceId);
           return views.program(saveProgram(owner, applianceId, r, false));
         });
   }
 
-  public ProgramEntity saveProgram(UUID owner, UUID applianceId, ApplianceDtos.ProgramInput r, boolean reuse) {
+  public ProgramEntity saveProgram(
+      UUID owner, UUID applianceId, ApplianceDtos.ProgramInput r, boolean reuse) {
     String name = Names.clean(r.name(), 60, true);
-    if (!reuse && programs.findByApplianceIdAndNameAndMinutes(applianceId, name, r.minutes()).stream().anyMatch(ProgramEntity::isCustom))
+    if (!reuse
+        && programs.findByApplianceIdAndNameAndMinutes(applianceId, name, r.minutes()).stream()
+            .anyMatch(ProgramEntity::isCustom))
       throw ApiException.conflict("duplicate_program", "This custom program already exists.");
     return saveProgramValue(owner, applianceId, name, r.minutes(), null, true);
   }
 
-  public ProgramEntity saveProgramValue(UUID owner, UUID applianceId, String value, int minutes,
-      String localizationKey, boolean custom) {
-    if (minutes < 1 || minutes > 1440) throw ApiException.invalid("Saved program duration must be 1–1440 minutes.");
+  public ProgramEntity saveProgramValue(
+      UUID owner,
+      UUID applianceId,
+      String value,
+      int minutes,
+      String localizationKey,
+      boolean custom) {
+    if (minutes < 1 || minutes > 1440)
+      throw ApiException.invalid("Saved program duration must be 1–1440 minutes.");
     String name = Names.clean(value, 60, true);
-    var existing = programs.findByApplianceIdAndNameAndMinutes(applianceId, name, minutes).stream()
-        .filter(p -> p.isCustom() == custom && Objects.equals(p.getLocalizationKey(), localizationKey)).findFirst();
+    var existing =
+        programs.findByApplianceIdAndNameAndMinutes(applianceId, name, minutes).stream()
+            .filter(
+                p ->
+                    p.isCustom() == custom
+                        && Objects.equals(p.getLocalizationKey(), localizationKey))
+            .findFirst();
     if (existing.isPresent()) return existing.get();
     long count = programs.countByApplianceId(applianceId);
-    if (count >= 30) throw ApiException.conflict("program_limit", "Maximum 30 programs per appliance.");
-    var p = new ProgramEntity(); p.setUserId(owner); p.setApplianceId(applianceId);
-    p.setName(name); p.setMinutes(minutes); p.setLocalizationKey(localizationKey);
-    p.setCustom(custom); p.setSuggested(!custom); p.setPosition((int)count);
+    if (count >= 30)
+      throw ApiException.conflict("program_limit", "Maximum 30 programs per appliance.");
+    var p = new ProgramEntity();
+    p.setUserId(owner);
+    p.setApplianceId(applianceId);
+    p.setName(name);
+    p.setMinutes(minutes);
+    p.setLocalizationKey(localizationKey);
+    p.setCustom(custom);
+    p.setSuggested(!custom);
+    p.setPosition((int) count);
     return programs.saveAndFlush(p);
   }
 
   public ApplianceDtos.ProgramView updateProgram(
-      UUID owner, UUID applianceId, UUID id, UUID key, ApplianceDtos.UpdateProgram r) {
-    return mutations.execute(
-        owner,
+      UUID actor, UUID applianceId, UUID id, UUID key, ApplianceDtos.UpdateProgram r) {
+    var resource = owned(actor, applianceId);
+    final UUID owner = resource.getUserId();
+    return mutations.executeShared(
+        actor,
+        resource.getHouseholdId(),
         key,
         "program.update:" + applianceId + ":" + id,
         r,
         ApplianceDtos.ProgramView.class,
         u -> {
+          if (!access
+              .appliance(actor, resource.getId())
+              .getHouseholdId()
+              .equals(resource.getHouseholdId()))
+            throw ApiException.conflict("stale_version", "The appliance moved; reload the home.");
           var p =
               programs
                   .findByIdAndApplianceIdAndUserId(id, applianceId, owner)
@@ -246,7 +342,9 @@ public class ApplianceService {
           if (p.getVersion() != r.version())
             throw ApiException.conflict(
                 "stale_version", "Programul s-a modificat. Reîncarcă datele.");
-          var other = programs.findByApplianceIdAndNameAndMinutes(applianceId, Names.clean(r.name(), 60, true), r.minutes());
+          var other =
+              programs.findByApplianceIdAndNameAndMinutes(
+                  applianceId, Names.clean(r.name(), 60, true), r.minutes());
           if (other.stream().anyMatch(o -> !o.getId().equals(id) && o.isCustom()))
             throw ApiException.conflict("duplicate_program", "This custom program already exists.");
           p.setName(Names.clean(r.name(), 60, true));
@@ -259,14 +357,22 @@ public class ApplianceService {
         });
   }
 
-  public MutationResult deleteProgram(UUID owner, UUID applianceId, UUID id, UUID key) {
-    return mutations.execute(
-        owner,
+  public MutationResult deleteProgram(UUID actor, UUID applianceId, UUID id, UUID key) {
+    var resource = owned(actor, applianceId);
+    final UUID owner = resource.getUserId();
+    return mutations.executeShared(
+        actor,
+        resource.getHouseholdId(),
         key,
         "program.delete:" + applianceId + ":" + id,
         Map.of(),
         MutationResult.class,
         u -> {
+          if (!access
+              .appliance(actor, resource.getId())
+              .getHouseholdId()
+              .equals(resource.getHouseholdId()))
+            throw ApiException.conflict("stale_version", "The appliance moved; reload the home.");
           programs.delete(
               programs
                   .findByIdAndApplianceIdAndUserId(id, applianceId, owner)

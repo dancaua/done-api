@@ -7,7 +7,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
-@EnableConfigurationProperties({AppProperties.class, org.adancau.doneapi.site.SiteProperties.class, org.adancau.doneapi.sharing.SharingProperties.class})
+@EnableConfigurationProperties({
+  org.adancau.doneapi.push.PushProperties.class,
+  AppProperties.class,
+  org.adancau.doneapi.site.SiteProperties.class,
+  org.adancau.doneapi.sharing.SharingProperties.class
+})
 public class CoreConfiguration {
   @Bean
   Clock clock() {

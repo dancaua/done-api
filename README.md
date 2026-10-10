@@ -318,3 +318,8 @@ Validation: run `node scripts/check-site.mjs` with Node 24 and `./mvnw -Dtest=Ba
 ### Native Apple sign-in and product scope
 
 See [Sign in with Apple configuration](docs/sign-in-with-apple.md) and [placeholder environment](deploy/apple.env.example). Public `/terms` and `/disclaimer` explain manual-only timers and safety limitations; privacy also describes Apple authentication data.
+
+
+## Shared households and notifications
+
+See [shared-households.md](docs/shared-households.md) for membership permissions, JSON DTOs, migrations V2/V3, invitation links and APNs configuration. Shared-resource access is validated before cached mutation replies. APNs is disabled by default and requires an authorized private key plus the iOS Push Notifications capability.

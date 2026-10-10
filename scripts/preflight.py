@@ -54,6 +54,11 @@ if values.get('APPLE_ENABLED','false')=='true':
 if values.get('APPLE_WEB_CLIENT_ID'):
     if values.get('APPLE_ENABLED')!='true' or values.get('APPLE_WEB_REDIRECT_URI')!=values.get('PUBLIC_ORIGIN','').rstrip('/')+'/delete-account':
         errors.append('Apple web login needs enabled native Apple credentials and the exact HTTPS /delete-account redirect.')
+if values.get('APNS_ENABLED','false') not in ('true','false'): errors.append('Invalid APNS_ENABLED.')
+if values.get('APNS_ENABLED','false')=='true':
+    for key in ('APNS_TEAM_ID','APNS_KEY_ID','APNS_TOPIC'):
+        if not values.get(key): errors.append(f'Configure {key}.')
+    if not values.get('APNS_PRIVATE_KEY_BASE64') and not Path('secrets/PushKey.p8').is_file(): errors.append('Provide secrets/PushKey.p8 or APNS_PRIVATE_KEY_BASE64 for APNs.')
 if values.get('ALLOW_ANONYMOUS_SHARING','false') not in ('true','false'): errors.append('Invalid ALLOW_ANONYMOUS_SHARING.')
 if errors:
     for error in errors: print(error)
