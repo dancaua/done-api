@@ -25,6 +25,13 @@ public class RecoveryConfiguration {
           || env.getProperty("spring.mail.password", "").isBlank())
         throw new IllegalStateException("Production recovery needs authenticated SMTP with verified TLS.");
     }
+    org.slf4j.LoggerFactory.getLogger(RecoveryConfiguration.class).info(
+        "Password recovery configured enabled={} delivery={} smtpPort={} authentication={} starttls={} ssl={} usernameConfigured={} passwordConfigured={}",
+        p.enabled(),p.deliveryEnabled(),env.getProperty("spring.mail.port",Integer.class,1025),
+        env.getProperty("spring.mail.properties.mail.smtp.auth",Boolean.class,false),
+        env.getProperty("spring.mail.properties.mail.smtp.starttls.enable",Boolean.class,false),
+        env.getProperty("spring.mail.properties.mail.smtp.ssl.enable",Boolean.class,false),
+        !env.getProperty("spring.mail.username","").isBlank(),!env.getProperty("spring.mail.password","").isBlank());
   }
   @Bean
   ThreadPoolTaskScheduler taskScheduler() {

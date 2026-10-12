@@ -42,8 +42,10 @@ public class PasswordRecoveryService {
     String email=rawEmail.strip().toLowerCase(Locale.ROOT);
     // Persistent per-account caps supplement the pre-authentication IP/global gate.
     // Deliberately return the same accepted response when a cap is reached.
-    if (!rates.consume("recovery:"+email,3) || !rates.consume("recovery-daily:"+email,10,86400)) return;
+    if (!rates.consume("recovery:"+email,3)) { RecoveryDeliveryLog.limited(false);return; }
+    if (!rates.consume("recovery-daily:"+email,10,86400)) { RecoveryDeliveryLog.limited(true);return; }
     tx.executeWithoutResult(status -> enqueue(email,"reset"));
+    RecoveryDeliveryLog.requested();
   }
 
   public void reset(String token,String newPassword) {
@@ -120,11 +122,14 @@ public class PasswordRecoveryService {
         message.setText(delivery.token()==null ? copy[3] : copy[1].replace("{minutes}",Long.toString(props.tokenTtl().toMinutes()))+"\n\n"+site.origin().replaceAll("/$", "")+
             "/reset-password?lang="+delivery.language()+"#token="+delivery.token()+"\n\n"+copy[4]);
         mail.send(message);
-      }
+        // Accepted by the SMTP provider; this does not certify inbox delivery.
+        RecoveryDeliveryLog.accepted(job.kind());
+      } else RecoveryDeliveryLog.skipped(job.kind());
       jdbc.update("DELETE FROM recovery_mail_queue WHERE id=? AND lease_id=?",job.id(),job.lease());
     } catch (RuntimeException exception) {
-      // Never log SMTP exceptions: providers may include recipients or message contents.
+      // Log only a bounded category: SMTP exception details may contain private data.
       failures.increment();
+      RecoveryDeliveryLog.failed(job.kind(),job.attempt(),exception);
       jdbc.update("UPDATE recovery_mail_queue SET lease_id=NULL,next_attempt_at=? WHERE id=? AND lease_id=?",
           DatabaseTime.at(clock.instant().plusSeconds(60L*job.attempt())),job.id(),job.lease());
     }
