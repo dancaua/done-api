@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
 public class RequestLimits {
   private record Bucket(long until, int requests) {}
   private final Map<String, Bucket> buckets = new HashMap<>();
+
   private final Clock clock;
+
   private long nextCleanup;
   public RequestLimits(Clock clock) { this.clock = clock; }
 
