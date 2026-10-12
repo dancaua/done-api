@@ -24,11 +24,11 @@ public class RequestLimits {
     }
     var b = buckets.get(key);
     if (b != null && b.until > now) {
-      if (b.requests >= limit) return false;
+      if (b.requests >= limit) {return false;}
       buckets.put(key, new Bucket(b.until, b.requests + 1));
       return true;
     }
-    if (b == null && buckets.size() >= capacity) return false;
+    if (b == null && buckets.size() >= capacity) {return false;}
     buckets.put(key, new Bucket(now + seconds, 1));
     return true;
   }
