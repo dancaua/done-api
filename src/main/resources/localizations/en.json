@@ -447,7 +447,7 @@
   "cloud.error.credentials": "Check your email and password.",
   "cloud.error.email": "An account already uses this email. Sign in instead.",
   "cloud.error.conflict": "The data changed on another device. Review it and try again.",
-  "cloud.error.recovery": "Password recovery is not available on the server yet.",
+  "cloud.error.recovery": "Password recovery is temporarily unavailable. Please try again later or contact support.",
   "cloud.error.apple": "Apple sign-in is not configured on the server yet.",
   "cloud.error.rate": "Too many requests. Wait a moment and try again.",
   "cloud.error.missing": "This item is no longer available. Refresh your data.",

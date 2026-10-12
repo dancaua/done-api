@@ -158,3 +158,20 @@ MySQL verification supersedes the historical PostgreSQL results above; see the c
 ## Shared households and notifications
 
 See [shared-households.md](shared-households.md) for membership permissions, JSON DTOs, migrations V2/V3, invitation links and APNs configuration. Shared-resource access is validated before cached mutation replies. APNs is disabled by default and requires an authorized private key plus the iOS Push Notifications capability.
+
+
+### Recovery availability in the deployed app
+
+`GET /api/v1/public-config` returns `passwordRecoveryEnabled` only when recovery and its delivery worker are enabled. It does not expose SMTP configuration or credentials, and the flag is not a live SMTP connectivity probe. The web recovery pages show a translated unavailable message and support link when disabled. iOS checks the capability before requesting recovery and maps upstream 5xx/HTML errors to the recovery-specific message. Older backends that omit the flag remain supported.
+
+An email address in `SUPPORT_EMAIL` does not configure mail delivery. Set the runtime variables in `deploy/recovery.env.example`: provider SMTP host/port/username/password, a verified `RECOVERY_FROM`, authenticated TLS, `RECOVERY_DELIVERY_ENABLED=true` and `RECOVERY_ENABLED=true`. Preserve `PUBLIC_ORIGIN` as the public HTTPS origin so generated reset links point to the deployed service. Store SMTP passwords as encrypted runtime secrets. Validate outbound connectivity and delivery on DigitalOcean before public release; a healthy API does not certify mail delivery.
+
+### Microsoft 365 sender configuration
+
+The support contact and recovery sender are `support@subkeeper.com`. Configure `smtp.office365.com`, port `587`, `SMTP_AUTH=true`, `SMTP_STARTTLS=true` and `SMTP_SSL=false`. TLS is required and certificate hostname verification remains enabled. Store the SMTP password only in encrypted DigitalOcean runtime settings or ignored local files; it is never bundled in the iOS app or the backend jar.
+
+The private `secrets/recovery-digitalocean.env` contains the supplied runtime values. All its keys use `RUN_TIME`; `SMTP_PASSWORD` must additionally use `ENCRYPTED`. Copy the value inside dotenv quotes into the platform UI, without the quote delimiters. `RECOVERY_ENABLED=true` and `RECOVERY_DELIVERY_ENABLED=true` activate recovery. Preserve the existing Apple, JWT and database runtime variables.
+
+On 12 October 2026, a local connection verified Microsoft TLS and successfully authenticated the supplied mailbox without sending email. This verifies the credential, not DigitalOcean network access or delivery to a recipient. After redeploying, request recovery for an account you control, verify arrival and the public reset link, then verify that the token works once and expires. Do not publish a successful delivery claim before this check.
+
+Provider documentation: https://www.godaddy.com/help/set-up-microsoft-365-email-with-smtp-on-a-multifunction-device-41962 and https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission. If the provider later disables password authentication, use a supported OAuth or transactional email configuration without weakening tenant security.

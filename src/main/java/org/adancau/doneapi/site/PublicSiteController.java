@@ -2,6 +2,7 @@ package org.adancau.doneapi.site;
 
 import java.util.*;
 import org.adancau.doneapi.config.AppProperties;
+import org.adancau.doneapi.auth.RecoveryProperties;
 import org.springframework.core.io.*;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -10,10 +11,12 @@ import org.springframework.web.bind.annotation.*;
 public class PublicSiteController {
   private final SiteProperties site;
   private final AppProperties props;
+  private final RecoveryProperties passwordRecovery;
 
-  public PublicSiteController(SiteProperties site, AppProperties props) {
+  public PublicSiteController(SiteProperties site, AppProperties props, RecoveryProperties passwordRecovery) {
     this.site = site;
     this.props = props;
+    this.passwordRecovery = passwordRecovery;
   }
 
   @GetMapping(value = "/", produces = MediaType.TEXT_HTML_VALUE)
@@ -78,6 +81,7 @@ public class PublicSiteController {
   public Map<String, Object> configuration() {
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("mock", site.mock());
+    result.put("passwordRecoveryEnabled", passwordRecovery.enabled() && passwordRecovery.deliveryEnabled());
     result.put("operatorName", site.operatorName());
     result.put("operatorAddress", site.operatorAddress());
     result.put("supportEmail", site.supportEmail());

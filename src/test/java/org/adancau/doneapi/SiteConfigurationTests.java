@@ -25,4 +25,12 @@ class SiteConfigurationTests {
     assertThrows(IllegalStateException.class,()->SiteConfiguration.validate(site(false,"https://done.app","support@done.app"),sharing,props("ro.done.web","https://evil.app/delete-account"),true));
     assertDoesNotThrow(()->SiteConfiguration.validate(site(false,"https://done.app","support@done.app"),sharing,props("ro.done.web","https://done.app/delete-account"),true));
   }
+  @Test void passwordRecoveryCapabilityRequiresEnabledDeliveryAndExposesNoMailCredentials() {
+    for(boolean enabled:java.util.List.of(false,true))for(boolean delivery:java.util.List.of(false,true)) {
+      var recovery=new org.adancau.doneapi.auth.RecoveryProperties(enabled,delivery,"security@done.app",Duration.ofMinutes(15),1000);
+      var config=new PublicSiteController(site(true,"http://localhost:8080","support@done.app"),props("",""),recovery).configuration();
+      assertEquals(enabled&&delivery,config.get("passwordRecoveryEnabled"));
+      assertFalse(config.containsKey("smtpPassword"));assertFalse(config.containsKey("smtpHost"));
+    }
+  }
 }

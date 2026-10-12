@@ -447,7 +447,7 @@
   "cloud.error.credentials": "Sprawdź e-mail i hasło.",
   "cloud.error.email": "Konto z tym adresem już istnieje. Zaloguj się.",
   "cloud.error.conflict": "Dane zmieniły się na innym urządzeniu. Sprawdź je i spróbuj ponownie.",
-  "cloud.error.recovery": "Odzyskiwanie hasła nie jest jeszcze dostępne na serwerze.",
+  "cloud.error.recovery": "Odzyskiwanie hasła jest chwilowo niedostępne. Spróbuj później lub skontaktuj się z pomocą techniczną.",
   "cloud.error.apple": "Logowanie Apple nie jest jeszcze skonfigurowane.",
   "cloud.error.rate": "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.",
   "cloud.error.missing": "Ten element jest już niedostępny. Odśwież dane.",

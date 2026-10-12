@@ -447,7 +447,7 @@
   "cloud.error.credentials": "Prüfe E-Mail und Passwort.",
   "cloud.error.email": "Für diese E-Mail besteht bereits ein Konto. Melde dich an.",
   "cloud.error.conflict": "Die Daten wurden auf einem anderen Gerät geändert. Prüfe sie und versuche es erneut.",
-  "cloud.error.recovery": "Die Passwortwiederherstellung ist auf dem Server noch nicht verfügbar.",
+  "cloud.error.recovery": "Die Passwortwiederherstellung ist momentan nicht verfügbar. Versuche es später erneut oder kontaktiere den Support.",
   "cloud.error.apple": "Die Apple-Anmeldung ist noch nicht eingerichtet.",
   "cloud.error.rate": "Zu viele Anfragen. Warte kurz und versuche es erneut.",
   "cloud.error.missing": "Dieser Eintrag ist nicht mehr verfügbar. Aktualisiere deine Daten.",

@@ -447,7 +447,7 @@
   "cloud.error.credentials": "Controlla email e password.",
   "cloud.error.email": "Esiste già un account con questa email. Accedi.",
   "cloud.error.conflict": "I dati sono cambiati su un altro dispositivo. Controlla e riprova.",
-  "cloud.error.recovery": "Il recupero password non è ancora disponibile sul server.",
+  "cloud.error.recovery": "Il recupero della password non è disponibile al momento. Riprova più tardi o contatta l’assistenza.",
   "cloud.error.apple": "L’accesso con Apple non è ancora configurato sul server.",
   "cloud.error.rate": "Troppe richieste. Attendi un momento e riprova.",
   "cloud.error.missing": "Questo elemento non è più disponibile. Aggiorna i dati.",

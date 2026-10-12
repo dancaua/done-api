@@ -39,6 +39,12 @@ async function request(path,method='GET',body,token){
   if(!response.ok){let problem;try{problem=await response.json();}catch{};throw Object.assign(new Error('request'),{status:response.status,code:problem?.code});}
   return response.status===204?null:response.json();
 }
+function hasRealSupportContact(){
+  const email=configuration?.supportEmail;
+  if(typeof email!=='string'||!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email))return false;
+  const domain=email.split('@')[1].toLowerCase();
+  return !/(?:^|\.)(?:example|invalid|test)$/.test(domain)&&!/^example\.(?:com|net|org)$/.test(domain);
+}
 function render(){
   document.documentElement.lang=language;el('language').setAttribute('aria-label',t('language'));
   el('navigation').replaceChildren(...Object.entries(paths).map(([key,path])=>{const a=link(key,path);if(page===key)a.setAttribute('aria-current','page');return a;}));
@@ -61,16 +67,16 @@ function render(){
   } else if(page==='support'){
     content.append(article('legal.scope.title','legal.scope.body'),article('legal.safety.title','legal.safety.body'));
     const faq=node('section',undefined,{class:'faq','aria-label':t('support')});for(const key of ['start','notifications','measure','share','offline']){const item=node('details');item.append(node('summary',t(`${key}Heading`)),paragraph(`${key}Body`));faq.append(item);}content.append(faq);
-    const card=article('needHelp','helpBody');card.className='help-card';const actions=node('div',undefined,{class:'actions'});const contact=link('contact',paths.contact),remove=link('delete',paths.delete);contact.className='button';remove.className='button secondary';actions.append(contact,remove);card.append(actions);content.append(card);
+    const card=article('needHelp','helpBody');card.className='help-card';const actions=node('div',undefined,{class:'actions'});const contact=link('contact',paths.contact),remove=link('delete',paths.delete);contact.className='button secondary';remove.className='button secondary';if(hasRealSupportContact()){card.append(node('p',configuration.supportEmail,{class:'email'}));actions.append(node('a',t('emailSupport'),{class:'button',href:`mailto:${configuration.supportEmail}`}));}actions.append(contact,remove);card.append(actions);content.append(card);
   } else if(page==='contact'){
     const grid=node('div',undefined,{class:'contact-grid'});
     for(const[key,email,action,symbol]of [['support',configuration.supportEmail,'emailSupport','support'],['privacyContact',configuration.privacyEmail,'emailPrivacy','privacy']]){
       const card=node('article');card.append(heading(key,symbol),node('p',email,{class:'email'}));
-      if(!configuration.mock)card.append(node('a',t(action),{class:'button secondary',href:`mailto:${email}`}));
+      if(!configuration.mock||(key==='support'&&hasRealSupportContact()))card.append(node('a',t(action),{class:'button secondary',href:`mailto:${email}`}));
       grid.append(card);
     }
     const details=node('article');details.append(facts([['operator',configuration.operatorName],['address',configuration.operatorAddress]]));
-    const note=node('p',t(configuration.mock?'mockContact':'contactSafety'),{class:'muted status'});details.append(note);content.append(grid,details);
+    const note=node('p',t(configuration.mock&&!hasRealSupportContact()?'mockContact':'contactSafety'),{class:'muted status'});details.append(note);content.append(grid,details);
   } else if(page==='delete') renderDelete(content);
   else{
     const grid=node('div',undefined,{class:'grid'});

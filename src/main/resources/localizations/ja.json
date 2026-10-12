@@ -447,7 +447,7 @@
   "cloud.error.credentials": "メールアドレスとパスワードを確認してください。",
   "cloud.error.email": "このメールアドレスのアカウントは既にあります。ログインしてください。",
   "cloud.error.conflict": "別のデバイスでデータが変更されました。確認して再試行してください。",
-  "cloud.error.recovery": "パスワード再設定はサーバーでまだ利用できません。",
+  "cloud.error.recovery": "現在、パスワードの再設定は利用できません。後でもう一度試すか、サポートにお問い合わせください。",
   "cloud.error.apple": "Appleでのログインはサーバーでまだ設定されていません。",
   "cloud.error.rate": "リクエストが多すぎます。少し待って再試行してください。",
   "cloud.error.missing": "この項目は利用できなくなりました。データを更新してください。",

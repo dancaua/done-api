@@ -447,7 +447,7 @@
   "cloud.error.credentials": "Vérifiez l’e-mail et le mot de passe.",
   "cloud.error.email": "Un compte utilise déjà cet e-mail. Connectez-vous.",
   "cloud.error.conflict": "Les données ont changé sur un autre appareil. Vérifiez et réessayez.",
-  "cloud.error.recovery": "La récupération du mot de passe n’est pas encore disponible.",
+  "cloud.error.recovery": "La récupération du mot de passe est momentanément indisponible. Réessayez plus tard ou contactez l’assistance.",
   "cloud.error.apple": "La connexion Apple n’est pas encore configurée.",
   "cloud.error.rate": "Trop de demandes. Patientez et réessayez.",
   "cloud.error.missing": "Cet élément n’est plus disponible. Actualisez les données.",

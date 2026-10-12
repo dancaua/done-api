@@ -15,7 +15,9 @@ export const copy = {
     "mismatch": "The passwords do not match.",
     "busy": "Too many attempts. Please wait and try again.",
     "error": "Unable to complete the request. Please try again later.",
-    "support": "Support"
+    "support": "Support",
+    "unavailable": "Password recovery is temporarily unavailable. Please try again later or contact support.",
+    "checking": "Checking availability…"
   },
   "ro": {
     "forgot": "Ai uitat parola?",
@@ -33,7 +35,9 @@ export const copy = {
     "mismatch": "Parolele nu coincid.",
     "busy": "Prea multe încercări. Așteaptă și încearcă din nou.",
     "error": "Cererea nu a putut fi finalizată. Încearcă din nou mai târziu.",
-    "support": "Suport"
+    "support": "Suport",
+    "unavailable": "Recuperarea parolei este momentan indisponibilă. Încearcă mai târziu sau contactează suportul.",
+    "checking": "Verificăm disponibilitatea…"
   },
   "es": {
     "forgot": "¿Has olvidado tu contraseña?",
@@ -51,7 +55,9 @@ export const copy = {
     "mismatch": "Las contraseñas no coinciden.",
     "busy": "Demasiados intentos. Espera y vuelve a intentarlo.",
     "error": "No se pudo completar la solicitud. Inténtalo más tarde.",
-    "support": "Soporte"
+    "support": "Soporte",
+    "unavailable": "La recuperación de contraseña no está disponible por el momento. Inténtalo más tarde o contacta con soporte.",
+    "checking": "Comprobando disponibilidad…"
   },
   "it": {
     "forgot": "Hai dimenticato la password?",
@@ -69,7 +75,9 @@ export const copy = {
     "mismatch": "Le password non coincidono.",
     "busy": "Troppi tentativi. Attendi e riprova.",
     "error": "Impossibile completare la richiesta. Riprova più tardi.",
-    "support": "Supporto"
+    "support": "Supporto",
+    "unavailable": "Il recupero della password non è disponibile al momento. Riprova più tardi o contatta l’assistenza.",
+    "checking": "Verifica della disponibilità…"
   },
   "fr": {
     "forgot": "Mot de passe oublié ?",
@@ -87,7 +95,9 @@ export const copy = {
     "mismatch": "Les mots de passe ne correspondent pas.",
     "busy": "Trop de tentatives. Patientez et réessayez.",
     "error": "Impossible de terminer la demande. Réessayez plus tard.",
-    "support": "Assistance"
+    "support": "Assistance",
+    "unavailable": "La récupération du mot de passe est momentanément indisponible. Réessayez plus tard ou contactez l’assistance.",
+    "checking": "Vérification de la disponibilité…"
   },
   "de": {
     "forgot": "Passwort vergessen?",
@@ -105,7 +115,9 @@ export const copy = {
     "mismatch": "Die Passwörter stimmen nicht überein.",
     "busy": "Zu viele Versuche. Warte und versuche es erneut.",
     "error": "Anfrage konnte nicht abgeschlossen werden. Versuche es später erneut.",
-    "support": "Support"
+    "support": "Support",
+    "unavailable": "Die Passwortwiederherstellung ist momentan nicht verfügbar. Versuche es später erneut oder kontaktiere den Support.",
+    "checking": "Verfügbarkeit wird geprüft…"
   },
   "pl": {
     "forgot": "Nie pamiętasz hasła?",
@@ -123,7 +135,9 @@ export const copy = {
     "mismatch": "Hasła nie są takie same.",
     "busy": "Zbyt wiele prób. Poczekaj i spróbuj ponownie.",
     "error": "Nie udało się ukończyć żądania. Spróbuj później.",
-    "support": "Pomoc"
+    "support": "Pomoc",
+    "unavailable": "Odzyskiwanie hasła jest chwilowo niedostępne. Spróbuj później lub skontaktuj się z pomocą techniczną.",
+    "checking": "Sprawdzanie dostępności…"
   },
   "hi": {
     "forgot": "पासवर्ड भूल गए?",
@@ -141,7 +155,9 @@ export const copy = {
     "mismatch": "पासवर्ड मेल नहीं खाते।",
     "busy": "बहुत अधिक प्रयास। कृपया प्रतीक्षा करें और फिर कोशिश करें।",
     "error": "अनुरोध पूरा नहीं हुआ। कृपया बाद में फिर कोशिश करें।",
-    "support": "सहायता"
+    "support": "सहायता",
+    "unavailable": "पासवर्ड रिकवरी अभी उपलब्ध नहीं है। बाद में फिर कोशिश करें या सहायता से संपर्क करें।",
+    "checking": "उपलब्धता जाँची जा रही है…"
   },
   "ja": {
     "forgot": "パスワードをお忘れですか？",
@@ -159,6 +175,8 @@ export const copy = {
     "mismatch": "パスワードが一致しません。",
     "busy": "試行回数が多すぎます。しばらくしてから再度お試しください。",
     "error": "リクエストを完了できませんでした。後でもう一度お試しください。",
-    "support": "サポート"
+    "support": "サポート",
+    "unavailable": "現在、パスワードの再設定は利用できません。後でもう一度試すか、サポートにお問い合わせください。",
+    "checking": "利用状況を確認中…"
   }
 };

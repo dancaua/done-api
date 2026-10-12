@@ -447,7 +447,7 @@
   "cloud.error.credentials": "Verifică emailul și parola.",
   "cloud.error.email": "Există deja un cont cu acest email. Autentifică-te.",
   "cloud.error.conflict": "Datele s-au schimbat pe alt dispozitiv. Verifică-le și încearcă din nou.",
-  "cloud.error.recovery": "Recuperarea parolei nu este încă disponibilă pe server.",
+  "cloud.error.recovery": "Recuperarea parolei este momentan indisponibilă. Încearcă mai târziu sau contactează suportul.",
   "cloud.error.apple": "Autentificarea Apple nu este încă configurată pe server.",
   "cloud.error.rate": "Prea multe cereri. Așteaptă puțin și încearcă din nou.",
   "cloud.error.missing": "Acest element nu mai este disponibil. Actualizează datele.",
