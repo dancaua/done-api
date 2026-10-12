@@ -17,9 +17,14 @@ public record AppProperties(Auth auth, Apple apple, Jobs jobs) {
       String encryptionKey,
       String jwkSetUri,
       String tokenUri,
-      String revokeUri, String webClientId, String webRedirectUri) {
+      String revokeUri, String webClientId, String webRedirectUri, String privateKeyBase64) {
     @org.springframework.boot.context.properties.bind.ConstructorBinding
     public Apple {}
+    public Apple(boolean enabled, String clientId, String teamId, String keyId, String privateKeyPath,
+        String encryptionKey, String jwkSetUri, String tokenUri, String revokeUri,
+        String webClientId, String webRedirectUri) {
+      this(enabled,clientId,teamId,keyId,privateKeyPath,encryptionKey,jwkSetUri,tokenUri,revokeUri,webClientId,webRedirectUri,"");
+    }
     public Apple(boolean enabled, String clientId, String teamId, String keyId, String privateKeyPath,
         String encryptionKey, String jwkSetUri, String tokenUri, String revokeUri) {
       this(enabled,clientId,teamId,keyId,privateKeyPath,encryptionKey,jwkSetUri,tokenUri,revokeUri,"","");

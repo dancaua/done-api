@@ -307,6 +307,47 @@ class AppleGatewayTests {
     assertEquals(0, calls.get());
   }
 
+  AppProperties withBase64(boolean enabled, String encoded) {
+    var a=props.apple();
+    return new AppProperties(null,new AppProperties.Apple(enabled,a.clientId(),a.teamId(),a.keyId(),"/missing/apple-signin.p8",a.encryptionKey(),a.jwkSetUri(),a.tokenUri(),a.revokeUri(),a.webClientId(),a.webRedirectUri(),encoded),null);
+  }
+
+  @Test
+  void base64PemWorksWithoutFileAndSignsVerifiedClientSecret() throws Exception {
+    String encoded=Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of(props.apple().privateKeyPath())));
+    var base64Gateway=new LiveAppleGateway(withBase64(true,encoded),clock);
+    assertEquals("apple-user",base64Gateway.authenticate(request(exchanged),"nonce").subject());
+    var secret=SignedJWT.parse(lastForm.get("client_secret"));
+    assertTrue(secret.verify(new ECDSAVerifier((ECPublicKey)ec.getPublic())));
+    assertEquals("KEY123",secret.getHeader().getKeyID());
+    assertEquals("TEAM123",secret.getJWTClaimsSet().getIssuer());
+    assertEquals("ro.done.app",secret.getJWTClaimsSet().getSubject());
+  }
+
+  @Test
+  void malformedBase64OrWrongKeyFailsWithoutCallingApple() {
+    assertThrows(IllegalStateException.class,()->new LiveAppleGateway(withBase64(true,"not-base64!"),clock));
+    String invalid=Base64.getEncoder().encodeToString("invalid PEM".getBytes(StandardCharsets.UTF_8));
+    assertThrows(IllegalStateException.class,()->new LiveAppleGateway(withBase64(true,invalid),clock));
+    assertEquals(0,calls.get());
+  }
+
+  @Test
+  void nonEs256PrivateKeyIsRejected() throws Exception {
+    var generator=KeyPairGenerator.getInstance("EC");generator.initialize(new ECGenParameterSpec("secp384r1"));
+    String pem="-----BEGIN PRIVATE KEY-----\n"+Base64.getEncoder().encodeToString(generator.generateKeyPair().getPrivate().getEncoded())+"\n-----END PRIVATE KEY-----\n";
+    String encoded=Base64.getEncoder().encodeToString(pem.getBytes(StandardCharsets.UTF_8));
+    assertThrows(IllegalStateException.class,()->new LiveAppleGateway(withBase64(true,encoded),clock));
+    assertEquals(0,calls.get());
+  }
+
+  @Test
+  void disabledAppleDoesNotReadMissingOrMalformedPrivateKey() {
+    var disabled=new LiveAppleGateway(withBase64(false,"not-base64!"),clock);
+    assertEquals(503,assertThrows(ApiException.class,()->disabled.authenticate(request(exchanged),"nonce")).getStatus().value());
+    assertEquals(0,calls.get());
+  }
+
   void configureWebClient() {
     var a=props.apple();
     props=new AppProperties(null,new AppProperties.Apple(a.enabled(),a.clientId(),a.teamId(),a.keyId(),a.privateKeyPath(),a.encryptionKey(),a.jwkSetUri(),a.tokenUri(),a.revokeUri(),"ro.done.web","https://done.app/delete-account"),null);

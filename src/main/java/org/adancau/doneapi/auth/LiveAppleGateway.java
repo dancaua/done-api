@@ -44,7 +44,9 @@ public class LiveAppleGateway implements AppleGateway {
       throw new IllegalStateException("Configure Apple client ID, team ID and key ID.");
     try {
       String pem =
-          Files.readString(Path.of(props.privateKeyPath()))
+          (props.privateKeyBase64() != null && !props.privateKeyBase64().isBlank()
+              ? new String(Base64.getDecoder().decode(props.privateKeyBase64()), java.nio.charset.StandardCharsets.UTF_8)
+              : Files.readString(Path.of(props.privateKeyPath())))
               .replace("-----BEGIN PRIVATE KEY-----", "")
               .replace("-----END PRIVATE KEY-----", "")
               .replaceAll("\\s", "");
@@ -52,8 +54,10 @@ public class LiveAppleGateway implements AppleGateway {
           (ECPrivateKey)
               KeyFactory.getInstance("EC")
                   .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(pem)));
+      if (signingKey.getParams().getCurve().getField().getFieldSize() != 256)
+        throw new IllegalArgumentException("Sign in with Apple requires ES256.");
     } catch (Exception e) {
-      throw new IllegalStateException("Cannot load Sign in with Apple P8 private key.");
+      throw new IllegalStateException("Cannot load Sign in with Apple P8 private key; configure APPLE_PRIVATE_KEY_PATH or APPLE_PRIVATE_KEY_BASE64.");
     }
     var jwt =
         NimbusJwtDecoder.withJwkSetUri(props.jwkSetUri())

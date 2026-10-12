@@ -50,7 +50,15 @@ if values.get('APPLE_ENABLED','false')=='true':
     if secret('APPLE_ENCRYPTION_KEY')!=32: errors.append('APPLE_ENCRYPTION_KEY must decode to exactly 32 random bytes.')
     for key in ('APPLE_CLIENT_ID','APPLE_TEAM_ID','APPLE_KEY_ID'):
         if not values.get(key): errors.append(f'Configure {key}.')
-    if not Path('secrets/AuthKey.p8').is_file(): errors.append('Provide secrets/AuthKey.p8, readable by container UID 10001.')
+    if values.get('APPLE_PRIVATE_KEY_BASE64'):
+        try:
+            pem=base64.b64decode(values['APPLE_PRIVATE_KEY_BASE64'],validate=True).strip()
+            if not pem.startswith(b'-----BEGIN PRIVATE KEY-----') or not pem.endswith(b'-----END PRIVATE KEY-----'):
+                errors.append('APPLE_PRIVATE_KEY_BASE64 must encode the complete .p8 PEM file.')
+        except Exception:
+            errors.append('Invalid APPLE_PRIVATE_KEY_BASE64.')
+    elif not Path('secrets/AuthKey.p8').is_file():
+        errors.append('Provide secrets/AuthKey.p8, readable by container UID 10001, or APPLE_PRIVATE_KEY_BASE64.')
 if values.get('APPLE_WEB_CLIENT_ID'):
     if values.get('APPLE_ENABLED')!='true' or values.get('APPLE_WEB_REDIRECT_URI')!=values.get('PUBLIC_ORIGIN','').rstrip('/')+'/delete-account':
         errors.append('Apple web login needs enabled native Apple credentials and the exact HTTPS /delete-account redirect.')
